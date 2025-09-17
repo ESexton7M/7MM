@@ -1,0 +1,14 @@
+{
+  "name": "asana-analytics-dashboard",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "analyzer"
+  ],
+  "scripts": {
+    "start": "cd analyzer && npm run dev",
+    "build": "cd analyzer && npm run build",
+    "lint": "cd analyzer && npm run lint"
+  }
+}
