@@ -40,8 +40,8 @@ export interface DailyTaskData {
 export interface ProjectDuration {
   name: string;
   duration: number;
-  created: string;
-  completed: string;
+  created: string | null;
+  completed: string | null;
   highlighted?: boolean;
 }
 

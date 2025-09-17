@@ -34,10 +34,25 @@ const ProjectDurationChart: FC<ProjectDurationChartProps> = ({
   }, [durations, highlightedProjects, shouldHighlight]);
 
   // Custom tooltip component for better formatting and display
-  const CustomTooltip: FC<{ active?: boolean; payload?: Array<{ payload: any }> }> = ({ active, payload }) => {
+  const CustomTooltip: FC<{ active?: boolean; payload?: Array<{ payload: Record<string, unknown> }> }> = ({ active, payload }) => {
     if (!active || !payload || !payload[0]) return null;
 
     const data = payload[0].payload as (typeof processedDurations)[0];
+    
+    // Format dates if they exist and are valid
+    const formatDate = (dateString: string | null): string => {
+      if (!dateString) return '';
+      try {
+        return new Date(dateString).toLocaleDateString();
+      } catch {
+        return '';
+      }
+    };
+    
+    // Only show dates section if valid dates are provided
+    const startDate = formatDate(data.created);
+    const endDate = formatDate(data.completed);
+    const showDates = startDate !== '' && endDate !== '';
     
     return (
       <div className="bg-gray-800 p-3 border border-gray-700 rounded-lg shadow-lg">
@@ -45,10 +60,12 @@ const ProjectDurationChart: FC<ProjectDurationChartProps> = ({
         <p className="text-gray-300">
           <span className="text-indigo-400 font-semibold">{data.duration} days</span> to complete
         </p>
-        <div className="text-xs text-gray-400 mt-2">
-          <p>Started: {new Date(data.created).toLocaleDateString()}</p>
-          <p>Completed: {new Date(data.completed).toLocaleDateString()}</p>
-        </div>
+        {showDates && (
+          <div className="text-xs text-gray-400 mt-2">
+            <p>Started: {startDate}</p>
+            <p>Completed: {endDate}</p>
+          </div>
+        )}
       </div>
     );
   };

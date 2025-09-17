@@ -1,23 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { gsap } from 'gsap';
+import { useState, useEffect, useCallback } from 'react';
 
 // Import components
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorDisplay from './components/ErrorDisplay';
 import DashboardView from './components/DashboardView';
 import ProjectDurationChart from './components/ProjectDurationChart';
-
-// Import required components from recharts
-import { 
-    BarChart, 
-    Bar, 
-    XAxis, 
-    YAxis, 
-    CartesianGrid, 
-    Tooltip, 
-    ResponsiveContainer,
-    Cell
-} from 'recharts';
 
 // Import types
 import type { 
@@ -26,9 +13,7 @@ import type {
   ProjectDuration,
   Stats,
   SectionDuration,
-  SectionCompletionSpan,
-  DateRangeFilter,
-  DailyTaskData
+  SectionCompletionSpan
 } from './types';
 
 // Import environment utilities
@@ -70,7 +55,7 @@ export default function App() {
     });
     const [filteredDurations, setFilteredDurations] = useState<typeof projectDurations>([]);
 
-    // Set default date range on component mount
+    // Set default date range on component mount and auto-fetch projects
     useEffect(() => {
         // Default start date to 5 years ago
         const defaultStart = new Date();
@@ -84,6 +69,12 @@ export default function App() {
             start: defaultStart.toISOString().split('T')[0],
             end: defaultEnd.toISOString().split('T')[0]
         });
+
+        // Automatically fetch projects if token is available
+        if (token) {
+            handleFetchProjects();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Filter and sort projects based on search, date range, and sort criteria
@@ -132,6 +123,19 @@ export default function App() {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [projectSort]);
+    
+    // Auto-run analyzeAllProjects when projects are fetched
+    useEffect(() => {
+        if (projects.length > 0 && !analyzing && !projectDurations.length) {
+            // Add a short delay before starting analysis to ensure UI updates
+            // This gives the user visual feedback that projects loaded first
+            const timer = setTimeout(() => {
+                analyzeAllProjects();
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [projects]);
 
 
 
@@ -387,9 +391,15 @@ export default function App() {
             });
             if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
             const result = await response.json();
-            setProjects(result.data);
-            if (result.data.length > 0) {
-                setSelectedProjectGid(result.data[0].gid);
+            
+            // Sort projects alphabetically by name
+            const sortedProjects = [...result.data].sort((a, b) => 
+                a.name.localeCompare(b.name)
+            );
+            
+            setProjects(sortedProjects);
+            if (sortedProjects.length > 0) {
+                setSelectedProjectGid(sortedProjects[0].gid);
             } else {
                 setError("No projects found in your Asana workspace.");
             }
@@ -467,10 +477,12 @@ export default function App() {
                             disabled={loading}
                             className="btn-primary w-full flex items-center justify-center"
                         >
-                            {loading && !projects.length ? 'Fetching...' : 'Fetch Projects'}
+                            {loading && !projects.length ? 'Fetching...' : projects.length ? 'Refresh Projects' : 'Fetch Projects'}
                         </button>
                     </div>
                     {error && <ErrorDisplay message={error} />}
+                    {loading && !analyzing && <div className="text-center mt-3 text-indigo-300 animate-pulse">Loading projects...</div>}
+                    {!loading && analyzing && projects.length > 0 && !projectDurations.length && <div className="text-center mt-3 text-indigo-300 animate-pulse">Auto-analyzing projects...</div>}
                     {projects.length > 0 && (
                         <div className="mt-6">
                             <label htmlFor="project-select" className="block text-sm font-medium text-gray-300 mb-2">Select a Project</label>
@@ -501,7 +513,7 @@ export default function App() {
                                 disabled={analyzing}
                                 className="btn-primary w-full sm:w-auto flex items-center justify-center"
                             >
-                                {analyzing ? 'Analyzing...' : 'Analyze All Projects'}
+                                {analyzing ? 'Analyzing...' : projectDurations.length > 0 ? 'Re-Analyze Projects' : 'Analyze All Projects'}
                             </button>
                         </div>
 
@@ -583,69 +595,10 @@ export default function App() {
                         {analysisError && <p className="text-red-400 mt-4 text-center">{analysisError}</p>}
                         {filteredDurations.length > 0 ? (
                             <div className="mt-8">
-                                <ResponsiveContainer width="100%" height={400}>
-                                    <BarChart
-                                        data={filteredDurations}
-                                        margin={{ top: 20, right: 20, left: 20, bottom: 5 }}
-                                    >
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
-                                        <XAxis
-                                            dataKey="name"
-                                            stroke="#A0AEC0"
-                                            hide={true}
-                                        />
-                                        <YAxis
-                                            stroke="#A0AEC0"
-                                            label={{
-                                                value: 'Days',
-                                                angle: -90,
-                                                position: 'insideLeft',
-                                                fill: '#E2E8F0',
-                                                offset: 10,
-                                                style: { fontWeight: 600 }
-                                            }}
-                                        />
-                                        <Tooltip
-                                            contentStyle={{ backgroundColor: '#1A202C', border: '1px solid #4A5568' }}
-                                            formatter={(value: number, _name: string, entry: { payload?: { name: string } }) => {
-                                                const name = entry?.payload?.name || '';
-                                                if (!name) return [value, ''];
-                                                const isHighlighted = highlightedProjects.some(query =>
-                                                    name.toLowerCase().includes(query)
-                                                );
-                                                return [
-                                                    <span style={{ color: '#E2E8F0', fontWeight: 600 }}>{value} days</span>,
-                                                    <span style={{ color: isHighlighted ? '#F59E0B' : '#818CF8' }}>
-                                                        {name}
-                                                    </span>
-                                                ];
-                                            }}
-                                        />
-                                        <Bar
-                                            dataKey="duration"
-                                            name="Completion Duration"
-                                            maxBarSize={50}
-                                        >
-                                            {filteredDurations.map((entry, index) => {
-                                                const isHighlighted = highlightedProjects.some(query =>
-                                                    entry.name.toLowerCase().includes(query)
-                                                );
-                                                return (
-                                                    <Cell
-                                                        key={`cell-${index}`}
-                                                        fill={isHighlighted ? '#F59E0B' : '#818CF8'}
-                                                        opacity={highlightedProjects.length > 0 ? (isHighlighted ? 1 : 0.3) : 1}
-                                                    />
-                                                );
-                                            })}
-                                        </Bar>
-                                    </BarChart>
-                                </ResponsiveContainer>
-                                {filteredDurations.length > 15 && (
-                                    <p className="text-center text-gray-400 mt-4 text-sm">
-                                        Tip: Use the search or date filters to narrow down projects for better visibility
-                                    </p>
-                                )}
+                                <ProjectDurationChart 
+                                    durations={filteredDurations}
+                                    highlightedProjects={highlightedProjects}
+                                />
                             </div>
                         ) : (
                             <p className="text-center text-gray-400 mt-8">No projects found matching your criteria.</p>
@@ -663,18 +616,15 @@ export default function App() {
                         <div className="card">
                             <h2 className="text-2xl font-bold mb-4">Total Completion Time by Section</h2>
                             <div className="mt-8 h-96 relative">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={sectionDurations} margin={{ top: 30, right: 20, left: 40, bottom: 100 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
-                                        <XAxis dataKey="section" stroke="#A0AEC0" hide={true} />
-                                        <YAxis stroke="#A0AEC0" />
-                                        <Tooltip 
-                                            contentStyle={{ backgroundColor: '#1A202C', border: '1px solid #4A5568' }}
-                                            formatter={(value: number) => [`${value} days`, 'Total Time']}
-                                        />
-                                        <Bar dataKey="avgDuration" name="Total Time (Days)" fill="#F472B6" />
-                                    </BarChart>
-                                </ResponsiveContainer>
+                                <ProjectDurationChart 
+                                    durations={sectionDurations.map(s => ({ 
+                                        name: s.section, 
+                                        duration: s.avgDuration,
+                                        created: null, 
+                                        completed: null
+                                    }))}
+                                    highlightedProjects={[]}
+                                />
                             </div>
                         </div>
 
@@ -682,18 +632,15 @@ export default function App() {
                         <div className="card">
                             <h2 className="text-2xl font-bold mb-4">Incremental Time by Section</h2>
                             <div className="mt-8 h-96 relative">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={incrementalDurations} margin={{ top: 30, right: 20, left: 40, bottom: 100 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
-                                        <XAxis dataKey="section" stroke="#A0AEC0" hide={true} />
-                                        <YAxis stroke="#A0AEC0" />
-                                        <Tooltip 
-                                            contentStyle={{ backgroundColor: '#1A202C', border: '1px solid #4A5568' }}
-                                            formatter={(value: number) => [`${value} days`, 'Additional Time']}
-                                        />
-                                        <Bar dataKey="avgDuration" name="Additional Time (Days)" fill="#60A5FA" />
-                                    </BarChart>
-                                </ResponsiveContainer>
+                                <ProjectDurationChart 
+                                    durations={incrementalDurations.map(s => ({ 
+                                        name: s.section, 
+                                        duration: s.avgDuration,
+                                        created: null, 
+                                        completed: null
+                                    }))}
+                                    highlightedProjects={[]}
+                                />
                             </div>
                         </div>
                     </div>
@@ -702,15 +649,15 @@ export default function App() {
                         <div className="card mt-8">
                             <h2 className="text-2xl font-bold mb-4">Section Completion Span (First to Last Completion)</h2>
                             <div className="mt-8 h-96 relative">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={sectionCompletionSpans} margin={{ top: 30, right: 20, left: 40, bottom: 100 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
-                                        <XAxis dataKey="section" stroke="#A0AEC0" hide={true} />
-                                        <YAxis stroke="#A0AEC0" label={{ value: 'Days', angle: -90, position: 'insideLeft', fill: '#A0AEC0' }} />
-                                        <Tooltip contentStyle={{ backgroundColor: '#1A202C', border: '1px solid #4A5568' }} />
-                                        <Bar dataKey="span" name="Completion Span (Days)" fill="#60A5FA" />
-                                    </BarChart>
-                                </ResponsiveContainer>
+                                <ProjectDurationChart 
+                                    durations={sectionCompletionSpans.map(s => ({ 
+                                        name: s.section, 
+                                        duration: s.span,
+                                        created: null,
+                                        completed: null
+                                    }))}
+                                    highlightedProjects={[]}
+                                />
                             </div>
                         </div>
                     )}
