@@ -2,7 +2,8 @@
 
 A comprehensive React TypeScript application for visualizing and analyzing Asana project data, providing insights into task completion times, project durations, and workflow metrics.
 
-![Asana Dashboard Screenshot](https://via.placeholder.com/1200x600?text=Asana+Analytics+Dashboard)
+<img width="1920" height="3577" alt="image" src="https://github.com/user-attachments/assets/6d9e72f2-bc78-49a2-a8f4-19b40f40f5f0" />
+
 
 ## Features
 
