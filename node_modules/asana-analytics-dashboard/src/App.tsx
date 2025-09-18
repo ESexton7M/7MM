@@ -502,7 +502,10 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
         <div className="min-h-screen bg-gray-900 text-gray-200 p-4 sm:p-6 lg:p-8">
             <div className="max-w-7xl mx-auto space-y-8">
                 <header className="text-center relative">
-                    <h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500 mb-2">Asana Project Dashboard</h1>
+                    <div className="flex flex-col items-center justify-center mb-2">
+                        <img src={import.meta.env.BASE_URL + '7mC.png'} alt="7 Mountains Creative Logo" className="h-16 w-16 object-contain mb-2" />
+                        <h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500 mb-2">7 Mountains Creative Analytics</h1>
+                    </div>
                     <p className="text-gray-400 text-lg">Visualize your project data and timelines.</p>
                     {isAuthenticated && (
                         <button 
@@ -529,49 +532,18 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
                 ) : (
                     <div className="space-y-8">
 
+                {/* Removed Asana token section. Only show fetch button and errors. */}
                 <div className="card">
-                    {/* Token input is hidden, token is set in code */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-300 mb-2">Asana Personal Access Token</label>
-                            <input
-                                type="password"
-                                value={token ? token.replace(/./g, '*') : ''}
-                                disabled
-                                className="input-field bg-gray-800 text-gray-400 cursor-not-allowed"
-                                placeholder="Token is securely set."
-                            />
-                        </div>
-                        <button
-                            onClick={handleFetchProjects}
-                            disabled={loading}
-                            className="btn-primary w-full flex items-center justify-center"
-                        >
-                            {loading && !projects.length ? 'Fetching...' : projects.length ? 'Refresh Projects' : 'Fetch Projects'}
-                        </button>
-                    </div>
+                    <button
+                        onClick={handleFetchProjects}
+                        disabled={loading}
+                        className="btn-primary w-full flex items-center justify-center"
+                    >
+                        {loading && !projects.length ? 'Fetching...' : projects.length ? 'Refresh Projects' : 'Fetch Projects'}
+                    </button>
                     {error && <ErrorDisplay message={error} />}
                     {loading && !analyzing && <div className="text-center mt-3 text-indigo-300 animate-pulse">Loading projects...</div>}
                     {!loading && analyzing && projects.length > 0 && !projectDurations.length && <div className="text-center mt-3 text-indigo-300 animate-pulse">Auto-analyzing projects...</div>}
-                    {projects.length > 0 && (
-                        <div className="mt-6">
-                            <label htmlFor="project-select" className="block text-sm font-medium text-gray-300 mb-2">Select a Project</label>
-                            <div className="relative">
-                                <select
-                                    id="project-select"
-                                    value={selectedProjectGid}
-                                    onChange={(e) => setSelectedProjectGid(e.target.value)}
-                                    className="select-field bg-gray-800 text-white text-lg border border-indigo-500 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    style={{ minWidth: '220px', fontWeight: 600, letterSpacing: '0.02em' }}
-                                >
-                                    {projects.map((p: Task) => <option key={p.gid} value={p.gid} className="bg-gray-900 text-white">{p.name}</option>)}
-                                </select>
-                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-                                    <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
                 {/* Cross-Project Duration Comparison Section */}
                 <div className="card mt-8">
@@ -674,7 +646,28 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
                             <p className="text-center text-gray-400 mt-8">No projects found matching your criteria.</p>
                         )}
                     </div>
+                    {/* Project dropdown in its own card section below */}
                 </div>
+                {projects.length > 0 && (
+                    <div className="card mt-8">
+                        <label htmlFor="project-select" className="block text-sm font-medium text-gray-300 mb-2">Select a Project</label>
+                        <div className="relative">
+                            <select
+                                id="project-select"
+                                value={selectedProjectGid}
+                                onChange={(e) => setSelectedProjectGid(e.target.value)}
+                                className="select-field bg-gray-800 text-white text-lg border border-indigo-500 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                style={{ minWidth: '220px', fontWeight: 600, letterSpacing: '0.02em' }}
+                            >
+                                {projects.map((p: Task) => <option key={p.gid} value={p.gid} className="bg-gray-900 text-white">{p.name}</option>)}
+                            </select>
+                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                )}
 
                 
 
@@ -690,8 +683,8 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
                                     durations={sectionDurations.map(s => ({ 
                                         name: s.section, 
                                         duration: s.avgDuration,
-                                        created: null, 
-                                        completed: null
+                                        created: '', 
+                                        completed: ''
                                     }))}
                                     highlightedProjects={[]}
                                 />
@@ -706,8 +699,8 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
                                     durations={incrementalDurations.map(s => ({ 
                                         name: s.section, 
                                         duration: s.avgDuration,
-                                        created: null, 
-                                        completed: null
+                                        created: '', 
+                                        completed: ''
                                     }))}
                                     highlightedProjects={[]}
                                 />
@@ -720,11 +713,11 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
                             <h2 className="text-2xl font-bold mb-4">Section Completion Span (First to Last Completion)</h2>
                             <div className="mt-8 h-96 relative">
                                 <ProjectDurationChart 
-                                    durations={sectionCompletionSpans.map(s => ({ 
-                                        name: s.section, 
+                                    durations={sectionCompletionSpans.map(s => ({
+                                        name: s.section,
                                         duration: s.span,
-                                        created: null,
-                                        completed: null
+                                        created: '',
+                                        completed: ''
                                     }))}
                                     highlightedProjects={[]}
                                 />
