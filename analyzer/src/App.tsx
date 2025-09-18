@@ -68,8 +68,8 @@ export default function App() {
         defaultEnd.setFullYear(defaultEnd.getFullYear() + 1);
         
         setDateRange({
-            start: defaultStart.toISOString().split('T')[0],
-            end: defaultEnd.toISOString().split('T')[0]
+            start: defaultStart.toISOString().split('T')[0] ?? '',
+            end: defaultEnd.toISOString().split('T')[0] ?? ''
         });
 
         // Automatically fetch projects if token is available
@@ -139,6 +139,7 @@ export default function App() {
             }, 500);
             return () => clearTimeout(timer);
         }
+        return undefined;
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [projects]);
 
@@ -153,11 +154,11 @@ export default function App() {
         // Example: Task name contains section, e.g. "Section: Onboarding - ..."
         if (!task.name) return 'Unknown';
         // Try to match 'Section: <name>' or '<name> Section' or '[Section] <name>'
-            const match = task.name.match(/Section[:\s-]+([\w ]+)/i);
-        if (match) return match[1].trim();
+        const match = task.name.match(/Section[:\s-]+([\w ]+)/i);
+        if (match && typeof match[1] === 'string') return match[1].trim();
         // Fallback: use first word as section
         const fallback = task.name.match(/^(\w+)/);
-        return fallback ? fallback[1] : 'Unknown';
+        return (fallback && typeof fallback[1] === 'string') ? fallback[1] : 'Unknown';
     }
 
     // Helper: Calculate both total and incremental completion times per section
@@ -201,11 +202,12 @@ export default function App() {
 
         // Calculate incremental durations
         const incrementalDurations = sectionsByTime.map((sectionInfo, index) => {
-            const currentTotal = totalDurations.find(d => d.section === sectionInfo.section)?.avgDuration || 0;
-            const previousTotal = index > 0 
-                ? totalDurations.find(d => d.section === sectionsByTime[index - 1].section)?.avgDuration || 0
-                : 0;
-            
+            const currentTotal = totalDurations.find(d => d.section === sectionInfo.section)?.avgDuration ?? 0;
+            let previousTotal = 0;
+            const prevSectionObj = index > 0 ? sectionsByTime[index - 1] : undefined;
+            if (prevSectionObj && typeof prevSectionObj.section === 'string') {
+                previousTotal = totalDurations.find(d => d.section === prevSectionObj.section)?.avgDuration ?? 0;
+            }
             return {
                 section: sectionInfo.section,
                 avgDuration: Math.max(0, currentTotal - previousTotal) // Ensure we don't return negative values
@@ -252,14 +254,16 @@ export default function App() {
         oneWeekAgo.setDate(today.getDate() - 7);
         tasks.forEach((task: Task) => {
             const createdAt = new Date(task.created_at);
-            if(createdAt > oneWeekAgo) {
-                tasksCreatedByDay[createdAt.getDay()].created++;
+            const createdDay = createdAt.getDay();
+            if (createdDay >= 0 && createdDay < tasksCreatedByDay.length && createdAt > oneWeekAgo) {
+                if (tasksCreatedByDay[createdDay]) tasksCreatedByDay[createdDay].created++;
             }
             if (task.completed && task.completed_at) {
                 completedCount++;
                 const completedAt = new Date(task.completed_at);
-                if (completedAt > oneWeekAgo) {
-                    tasksCompletedByDay[completedAt.getDay()].completed++;
+                const completedDay = completedAt.getDay();
+                if (completedDay >= 0 && completedDay < tasksCompletedByDay.length && completedAt > oneWeekAgo) {
+                    if (tasksCompletedByDay[completedDay]) tasksCompletedByDay[completedDay].completed++;
                 }
                 const timeDiff = completedAt.getTime() - createdAt.getTime();
                 completionTimes.push(timeDiff / (1000 * 3600 * 24)); // in days
