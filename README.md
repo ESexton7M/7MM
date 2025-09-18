@@ -2,7 +2,7 @@
 
 A comprehensive React TypeScript application for visualizing and analyzing Asana project data, providing insights into task completion times, project durations, and workflow metrics.
 
-<img width="1920" height="3577" alt="image" src="https://github.com/user-attachments/assets/6d9e72f2-bc78-49a2-a8f4-19b40f40f5f0" />
+<img width="1920" height="3677" alt="screencapture-analytics-7mountainscreative-2025-09-18-14_05_13" src="https://github.com/user-attachments/assets/dbf56cc4-5d6b-4e3c-9c81-e1b6c13cb0be" />
 
 
 ## Features
