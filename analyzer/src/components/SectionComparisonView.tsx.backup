@@ -1,0 +1,414 @@
+import { useState, useEffect, useCallback } from 'react';
+import type { Task, ProjectDuration } from '../types';
+import { standardPhaseCategories, standardizeSectionName, getSectionCategoryColor } from '../config/sectionPhases';
+
+// Extend ProjectDuration type with optional gid
+interface ProjectWithGid extends ProjectDuration {
+  gid?: string;
+}
+
+interface SectionComparisonProps {
+  projects: (ProjectDuration & { gid?: string })[];
+  highlightedProjects: string[];
+}
+
+interface ProjectSectionData {
+  projectName: string;
+  sections: Record<string, {
+    duration: number;
+    taskCount: number;
+  }>;
+  gid?: string;
+}
+
+const SectionComparisonView: React.FC<SectionComparisonProps> = ({ 
+  projects,
+  highlightedProjects 
+}) => {
+  const [selectedSection, setSelectedSection] = useState<string>('Development');
+  const [projectSectionData, setProjectSectionData] = useState<ProjectSectionData[]>([]);
+  const [uniqueSections, setUniqueSections] = useState<string[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
+  
+  // Extract section data for each project
+  const fetchSectionData = useCallback(async () => {
+    if (!projects.length) return;
+    
+    setLoading(true);
+    setError('');
+    
+    try {
+      const { getCachedProjects, getCachedProjectTasks } = await import('../utils/asanaCache');
+      const cachedProjects = getCachedProjects();
+      
+      // Store section data for each project
+      const allProjectData: ProjectSectionData[] = [];
+      // Track all unique sections across all projects
+      const allSections = new Set<string>();
+      
+      console.log('--- Processing Section Data for Projects ---');
+      console.log(`Total projects: ${projects.length}`);
+      
+      for (const project of projects) {
+        // Find project GID (either from project data or by looking up in cache)
+        let projectGid = project.gid;
+        if (!projectGid) {
+          const cachedProject = cachedProjects.find(p => p.name === project.name);
+          if (!cachedProject) {
+            console.warn(`Project ${project.name} not found in cache`);
+            continue;
+          }
+          projectGid = cachedProject.gid;
+        }
+        
+        // Get tasks for this project
+        const tasks = getCachedProjectTasks(projectGid);
+        if (!tasks || tasks.length === 0) continue;
+        
+        console.log(`\nProject "${project.name}" (GID: ${projectGid}) has ${tasks.length} tasks`);
+        
+        // Show task sections in this project
+        const taskSections = tasks.filter(t => t.section).map(t => t.section);
+        const uniqueSections = [...new Set(taskSections)];
+        console.log(`Raw sections in project: ${uniqueSections.join(', ') || 'None'}`);
+        
+        // Log the project's completion date from the project data
+        console.log(`Project duration: ${project.created} to ${project.completed}`);
+        
+        
+        // Process tasks to extract section data
+        const sectionData: Record<string, { duration: number; taskCount: number }> = {};
+        const sectionTasksData: Record<string, { created: Date[]; completed: Date[] }> = {};
+        
+        // Group tasks by section - either from task.section directly, or extract from name
+        console.log("\nTask section assignments:");
+        tasks.forEach((task, index) => {
+          // Skip incomplete tasks
+          if (!task.completed || !task.completed_at || !task.created_at) {
+            console.log(`Task "${task.name}" - SKIPPED (not completed)`);
+            return;
+          }
+          
+          // Extract section name from task
+          let rawSectionName: string;
+          let standardSection: string;
+          
+          // First try the explicit section field
+          if (task.section) {
+            rawSectionName = task.section;
+            standardSection = standardizeSectionName(rawSectionName);
+            console.log(`Task "${task.name}" - Using provided section: "${rawSectionName}" → "${standardSection}"`);
+          } else {
+            // If no section is provided, try to extract from task name
+            rawSectionName = extractSectionFromTask(task);
+            
+            // We'll skip the standardization here since extractSectionFromTask now
+            // returns standardized section names directly
+            standardSection = rawSectionName;
+            console.log(`Task "${task.name}" - Using extracted section: "${standardSection}"`);
+          }
+          
+          // Debug full details
+          console.log(`Task ${index + 1}/${tasks.length}: "${task.name}" - Raw: "${rawSectionName}" → Standard: "${standardSection}"`);
+          console.log(`  Created: ${new Date(task.created_at).toISOString()}, Completed: ${new Date(task.completed_at).toISOString()}`);
+          
+          // Initialize section data if needed
+          if (!sectionData[standardSection]) {
+            sectionData[standardSection] = { duration: 0, taskCount: 0 };
+          }
+          
+          if (!sectionTasksData[standardSection]) {
+            sectionTasksData[standardSection] = { created: [], completed: [] };
+          }
+          
+          // Store created and completed dates for this task
+          const created = new Date(task.created_at);
+          const completed = new Date(task.completed_at);
+          
+          // Now we can safely access the arrays since they're guaranteed to exist
+          sectionTasksData[standardSection]?.created.push(created);
+          sectionTasksData[standardSection]?.completed.push(completed);
+          
+          // Increment the task count for this section safely
+          const section = sectionData[standardSection];
+          if (section) {
+            section.taskCount += 1;
+          }
+          
+          // Track this section name
+          allSections.add(standardSection);
+        });
+        
+        console.log("\nSection completion calculations:");
+        // Calculate section completion duration (time from first task created to last task completed)
+        Object.keys(sectionTasksData).forEach(section => {
+          const taskDates = sectionTasksData[section];
+          if (taskDates && taskDates.created.length > 0 && taskDates.completed.length > 0) {
+            // Find earliest task creation date
+            const earliestCreation = new Date(Math.min(...taskDates.created.map(d => d.getTime())));
+            // Find latest task completion date
+            const latestCompletion = new Date(Math.max(...taskDates.completed.map(d => d.getTime())));
+            
+            // Calculate total section duration in days
+            const duration = Math.max(0, (latestCompletion.getTime() - earliestCreation.getTime()) / (1000 * 3600 * 24));
+            
+            console.log(`Section "${section}" - ${taskDates.created.length} tasks`);
+            console.log(`  First task created: ${earliestCreation.toISOString()}`);
+            console.log(`  Last task completed: ${latestCompletion.toISOString()}`);
+            console.log(`  Total duration: ${duration.toFixed(2)} days, Rounded: ${Math.round(duration)} days`);
+            
+            // TypeScript safety
+            if (sectionData[section]) {
+              sectionData[section].duration = Math.round(duration);
+            }
+          }
+        });
+        
+        console.log("\nSection data for this project:");
+        Object.entries(sectionData).forEach(([section, data]) => {
+          console.log(`Section "${section}": ${data.duration} days (${data.taskCount} tasks)`);
+        });
+        
+        // Add this project's data to the result
+        allProjectData.push({
+          projectName: project.name,
+          sections: sectionData,
+          gid: projectGid
+        });
+        
+        console.log(`Added project "${project.name}" to results with ${Object.keys(sectionData).length} sections`);
+        console.log("---------------------------------------------");
+      }
+      
+      // Convert unique sections set to array, prioritize standard phase categories
+      const sortedSections = [...allSections].sort((a, b) => {
+        // Put standard phase categories first, then alphabetically
+        const aIndex = standardPhaseCategories.indexOf(a);
+        const bIndex = standardPhaseCategories.indexOf(b);
+        
+        if (aIndex >= 0 && bIndex >= 0) return aIndex - bIndex;
+        if (aIndex >= 0) return -1;
+        if (bIndex >= 0) return 1;
+        
+        return a.localeCompare(b);
+      });
+      
+      setProjectSectionData(allProjectData);
+      setUniqueSections(sortedSections);
+      
+      // If the currently selected section isn't in the data, default to first available
+      if (!sortedSections.includes(selectedSection) && sortedSections.length > 0) {
+        const firstSection = sortedSections[0];
+        if (firstSection) {
+          setSelectedSection(firstSection);
+        }
+      }
+      
+    } catch (err) {
+      console.error('Error fetching section data:', err);
+      setError('Failed to load section comparison data');
+    } finally {
+      setLoading(false);
+    }
+  }, [projects, selectedSection]);
+  
+  // Extract section name from task
+  const extractSectionFromTask = (task: Task): string => {
+    if (!task.name) return 'Unknown';
+    
+    // Try to match section patterns
+    const sectionMatch = task.name.match(/^([^:]+):/);
+    if (sectionMatch && sectionMatch[1]) {
+      const section = sectionMatch[1].trim();
+      console.log(`Task "${task.name}" - Extracted section from prefix: "${section}"`);
+      return section;
+    }
+    
+    // Try to match bracket pattern
+    const bracketMatch = task.name.match(/^\[([^\]]+)\]/);
+    if (bracketMatch && bracketMatch[1]) {
+      const section = bracketMatch[1].trim();
+      console.log(`Task "${task.name}" - Extracted section from brackets: "${section}"`);
+      return section;
+    }
+    
+    // Look for specific phase keywords in the task name
+    const phases = [
+      { name: 'Design', keywords: ['design', 'mockup', 'wireframe', 'prototype', 'ui', 'ux'] },
+      { name: 'Development', keywords: ['development', 'code', 'implement', 'build', 'dev'] },
+      { name: 'Launch', keywords: ['launch', 'deploy', 'release', 'publish', 'go-live'] },
+      { name: 'Onboarding', keywords: ['onboard', 'setup', 'kick-off', 'kickoff', 'discovery'] }
+    ];
+    
+    const taskNameLower = task.name.toLowerCase();
+    for (const phase of phases) {
+      if (phase.keywords.some(keyword => taskNameLower.includes(keyword))) {
+        console.log(`Task "${task.name}" - Matched phase keyword: "${phase.name}"`);
+        return phase.name;
+      }
+    }
+    
+    console.log(`Task "${task.name}" - No section pattern or keyword found, using "Unknown"`);
+    return 'Unknown';
+  };
+  
+  // Load data when projects change
+  useEffect(() => {
+    fetchSectionData();
+  }, [fetchSectionData]);
+  
+  // Filter projects with data for the selected section
+  const filteredProjects = projectSectionData
+    .filter(project => project.sections[selectedSection])
+    .sort((a, b) => {
+      // Sort by duration of selected section
+      const aDuration = a.sections[selectedSection]?.duration || 0;
+      const bDuration = b.sections[selectedSection]?.duration || 0;
+      return aDuration - bDuration; // Sort ascending (shortest first)
+    });
+  
+  // Calculate the maximum duration for the selected section
+  const maxDuration = Math.max(
+    ...filteredProjects.map(p => p.sections[selectedSection]?.duration || 0),
+    1 // Ensure we don't get 0 which would cause division by zero issues
+  );
+  
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h2 className="text-2xl font-bold">Section Total Completion Time Comparison</h2>
+        
+        {/* Section selector */}
+        <div className="flex items-center">
+          <label htmlFor="section-selector" className="text-sm text-gray-300 mr-3">
+            Compare Section:
+          </label>
+          <select
+            id="section-selector"
+            value={selectedSection}
+            onChange={(e) => setSelectedSection(e.target.value)}
+            className="bg-gray-800 text-white rounded px-3 py-1 text-sm border border-gray-600"
+            disabled={loading || uniqueSections.length === 0}
+          >
+            {uniqueSections.map(section => (
+              <option key={section} value={section}>{section}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      
+      {loading && (
+        <div className="text-center py-8">
+          <p className="text-gray-400 animate-pulse">Loading section data...</p>
+        </div>
+      )}
+      
+      {error && (
+        <div className="bg-red-900 bg-opacity-20 border border-red-700 rounded-md p-4 text-center">
+          <p className="text-red-400">{error}</p>
+        </div>
+      )}
+      
+      {!loading && !error && filteredProjects.length === 0 && (
+        <div className="text-center py-8">
+          <p className="text-gray-400">No projects found with data for this section.</p>
+        </div>
+      )}
+      
+      {!loading && !error && filteredProjects.length > 0 && (
+        <>
+          {/* Section color key */}
+          <div className="flex items-center mb-4">
+            <span className="text-sm text-gray-300 mr-2">Section:</span>
+            <div className="flex items-center">
+              <div 
+                className="w-4 h-4 rounded-sm mr-2"
+                style={{ backgroundColor: getSectionCategoryColor(selectedSection) }}
+              />
+              <span className="text-sm">{selectedSection}</span>
+            </div>
+          </div>
+          
+          {/* Projects comparison for selected section */}
+          <div className="space-y-4">
+            {filteredProjects.map((project, idx) => {
+              const isHighlighted = highlightedProjects.some(h => 
+                project.projectName.toLowerCase().includes(h.toLowerCase())
+              );
+              
+              const sectionData = project.sections[selectedSection];
+              
+              return (
+                <div 
+                  key={idx} 
+                  className={`transition-all ${
+                    isHighlighted ? 'scale-101 shadow-lg border border-indigo-500' : ''
+                  }`}
+                >
+                  <div className="flex items-center mb-1">
+                    <div className="w-48 truncate" title={project.projectName}>
+                      <span className={isHighlighted ? 'font-bold text-indigo-300' : ''}>
+                        {project.projectName}
+                      </span>
+                    </div>
+                    <div className="ml-2 text-xs text-gray-400">
+                      {`${selectedSection}: ${sectionData?.duration || 0} days from first task to completion (${sectionData?.taskCount || 0} tasks)`}
+                    </div>
+                  </div>
+                  
+                  <div className="h-6 bg-gray-700 rounded-md overflow-hidden">
+                    <div 
+                      style={{ 
+                        width: `${((sectionData?.duration || 0) / maxDuration) * 100}%`,
+                        backgroundColor: getSectionCategoryColor(selectedSection)
+                      }}
+                      className="h-full transition-all"
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          
+          {/* Section statistics */}
+          <div className="mt-6 pt-6 border-t border-gray-700">
+            <h3 className="text-lg font-semibold mb-2">Statistics for {selectedSection}</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-gray-800 p-4 rounded-md">
+                <p className="text-sm text-gray-400">Average Completion Time</p>
+                <p className="text-2xl font-bold">
+                  {Math.round(filteredProjects.reduce((sum, p) => 
+                    sum + (p.sections[selectedSection]?.duration || 0), 0
+                  ) / filteredProjects.length)} days
+                </p>
+              </div>
+              
+              <div className="bg-gray-800 p-4 rounded-md">
+                <p className="text-sm text-gray-400">Shortest</p>
+                <p className="text-2xl font-bold">
+                  {filteredProjects.length > 0 ? 
+                    `${filteredProjects[0]?.sections?.[selectedSection]?.duration || 0} days` : 
+                    'N/A'}
+                </p>
+                <p className="text-xs truncate">{filteredProjects[0]?.projectName || ''}</p>
+              </div>
+              
+              <div className="bg-gray-800 p-4 rounded-md">
+                <p className="text-sm text-gray-400">Longest</p>
+                <p className="text-2xl font-bold">
+                  {filteredProjects.length > 0 ? 
+                    `${filteredProjects[filteredProjects.length-1]?.sections?.[selectedSection]?.duration || 0} days` : 
+                    'N/A'}
+                </p>
+                <p className="text-xs truncate">{filteredProjects[filteredProjects.length-1]?.projectName || ''}</p>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+export default SectionComparisonView;

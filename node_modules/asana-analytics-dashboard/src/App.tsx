@@ -4,18 +4,16 @@ import { useState, useEffect, useCallback } from 'react';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorDisplay from './components/ErrorDisplay';
 import DashboardView from './components/DashboardView';
-import ProjectDurationChart from './components/ProjectDurationChart';
 import GoogleLogin from './components/GoogleLogin';
 import CacheStatusIndicator from './components/CacheStatusIndicator';
+import { ComparisonTabs } from './components/ComparisonTabs';
 
 // Import types
 import type { 
   Task, 
   ProjectData, 
   ProjectDuration,
-  Stats,
-  SectionDuration,
-  SectionCompletionSpan
+  Stats
 } from './types';
 
 // Import environment utilities
@@ -42,10 +40,7 @@ export default function App() {
     const [analyzing, setAnalyzing] = useState(false);
     const [analysisError, setAnalysisError] = useState('');
     
-    // State for section analytics
-    const [sectionDurations, setSectionDurations] = useState<SectionDuration[]>([]);
-    const [incrementalDurations, setIncrementalDurations] = useState<SectionDuration[]>([]);
-    const [sectionCompletionSpans, setSectionCompletionSpans] = useState<SectionCompletionSpan[]>([]);
+    // Section analytics are now handled in ComparisonTabs component
 
     // Sorting and filtering state for project comparison
     const [projectSort, setProjectSort] = useState<string>('duration-asc');
@@ -287,12 +282,7 @@ export default function App() {
         })).sort((a: Task, b: Task) => {
             return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         });
-    // Calculate section durations
-    const durations = calculateSectionDurations(tasks);
-    setSectionDurations(durations.totalDurations);
-    setIncrementalDurations(durations.incrementalDurations);
-    // Calculate section completion spans
-    setSectionCompletionSpans(calculateSectionCompletionSpans(tasks));
+    // Section durations are now handled in the ComparisonTabs component
         setProjectData({
             stats,
             taskTableData,
@@ -763,7 +753,7 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
                 <div className="card mt-8">
                     <div className="space-y-6">
                         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                            <h2 className="text-2xl font-bold mb-4 sm:mb-0">Compare Project Completion Times</h2>
+                            <h2 className="text-2xl font-bold mb-4 sm:mb-0">Project & Section Comparisons</h2>
                             <button
                                 onClick={analyzeAllProjects}
                                 disabled={analyzing}
@@ -851,9 +841,9 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
                         {analysisError && <p className="text-red-400 mt-4 text-center">{analysisError}</p>}
                         {filteredDurations.length > 0 ? (
                             <div className="mt-8">
-                                <ProjectDurationChart 
-                                    durations={filteredDurations}
-                                    highlightedProjects={highlightedProjects}
+                                <ComparisonTabs
+                                  projectDurations={filteredDurations}
+                                  highlightedProjects={highlightedProjects}
                                 />
                             </div>
                         ) : (
@@ -885,61 +875,7 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
 
                 
 
-                {/* Section Completion Time Comparison */}
-                {sectionDurations.length > 0 && (
-                    <>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Total Duration Chart */}
-                        <div className="card">
-                            <h2 className="text-2xl font-bold mb-4">Total Completion Time by Section</h2>
-                            <div className="mt-8 h-96 relative">
-                                <ProjectDurationChart 
-                                    durations={sectionDurations.map(s => ({ 
-                                        name: s.section, 
-                                        duration: s.avgDuration,
-                                        created: '', 
-                                        completed: ''
-                                    }))}
-                                    highlightedProjects={[]}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Incremental Duration Chart */}
-                        <div className="card">
-                            <h2 className="text-2xl font-bold mb-4">Incremental Time by Section</h2>
-                            <div className="mt-8 h-96 relative">
-                                <ProjectDurationChart 
-                                    durations={incrementalDurations.map(s => ({ 
-                                        name: s.section, 
-                                        duration: s.avgDuration,
-                                        created: '', 
-                                        completed: ''
-                                    }))}
-                                    highlightedProjects={[]}
-                                />
-                            </div>
-                        </div>
-                    </div>
-                    {/* Section Completion Span Graph */}
-                    {sectionCompletionSpans.length > 0 && (
-                        <div className="card mt-8">
-                            <h2 className="text-2xl font-bold mb-4">Section Completion Span (First to Last Completion)</h2>
-                            <div className="mt-8 h-96 relative">
-                                <ProjectDurationChart 
-                                    durations={sectionCompletionSpans.map(s => ({
-                                        name: s.section,
-                                        duration: s.span,
-                                        created: '',
-                                        completed: ''
-                                    }))}
-                                    highlightedProjects={[]}
-                                />
-                            </div>
-                        </div>
-                    )}
-                    </>
-                )}
+                {/* Section stats are now integrated into the comparison tabs */}
                 {(loading || analyzing) && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.18)' }}>
                         <div className="flex flex-col items-center">

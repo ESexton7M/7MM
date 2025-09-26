@@ -1,6 +1,7 @@
 /**
  * Caching mechanism for Asana API data
  * This reduces API calls and allows sharing data across users
+ * Cache is persisted in localStorage to survive page refreshes and app restarts
  */
 
 import type { Task } from '../types';
@@ -15,16 +16,38 @@ interface CachedAsanaData {
   };
 }
 
-// In-memory cache (will be lost on server restart)
-let asanaCache: CachedAsanaData = {
-  timestamp: 0,
-  projects: [],
-  projectTasks: {},
-  analyzedData: {
-    projectDurations: [],
-    lastUpdated: 0
+// Cache key for localStorage
+const CACHE_KEY = 'asana_cache_v1';
+
+// Initialize cache from localStorage or create empty cache
+function initializeCache(): CachedAsanaData {
+  try {
+    // Check if localStorage is available
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const storedCache = localStorage.getItem(CACHE_KEY);
+      if (storedCache) {
+        console.log('Loading cache from localStorage');
+        return JSON.parse(storedCache);
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to load cache from localStorage:', err);
   }
-};
+
+  // Default empty cache
+  return {
+    timestamp: 0,
+    projects: [],
+    projectTasks: {},
+    analyzedData: {
+      projectDurations: [],
+      lastUpdated: 0
+    }
+  };
+}
+
+// Initialize cache
+let asanaCache: CachedAsanaData = initializeCache();
 
 // Cache expiration time (24 hours in milliseconds)
 const CACHE_EXPIRATION = 24 * 60 * 60 * 1000;
@@ -38,11 +61,26 @@ export function isCacheValid(): boolean {
 }
 
 /**
+ * Save the current cache state to localStorage
+ */
+function saveCache(): void {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(asanaCache));
+      console.log('Cache saved to localStorage');
+    }
+  } catch (err) {
+    console.warn('Failed to save cache to localStorage:', err);
+  }
+}
+
+/**
  * Store projects in the cache
  */
 export function cacheProjects(projects: Task[]): void {
   asanaCache.projects = projects;
   asanaCache.timestamp = Date.now();
+  saveCache();
 }
 
 /**
@@ -57,6 +95,7 @@ export function getCachedProjects(): Task[] {
  */
 export function cacheProjectTasks(projectId: string, tasks: Task[]): void {
   asanaCache.projectTasks[projectId] = tasks;
+  saveCache();
 }
 
 /**
@@ -74,6 +113,7 @@ export function cacheAnalyzedData(projectDurations: any[]): void {
     projectDurations,
     lastUpdated: Date.now()
   };
+  saveCache();
 }
 
 /**
@@ -96,6 +136,16 @@ export function clearCache(): void {
       lastUpdated: 0
     }
   };
+  
+  // Also clear from localStorage
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.removeItem(CACHE_KEY);
+      console.log('Cache cleared from localStorage');
+    }
+  } catch (err) {
+    console.warn('Failed to clear cache from localStorage:', err);
+  }
 }
 
 /**
@@ -105,12 +155,23 @@ export function getCacheStatus(): {
   hasData: boolean,
   lastUpdated: string | null,
   projectCount: number,
-  expiresIn: string | null
+  expiresIn: string | null,
+  isPersisted: boolean
 } {
   const now = Date.now();
   const hasData = asanaCache.timestamp > 0;
   let lastUpdated = null;
   let expiresIn = null;
+  let isPersisted = false;
+  
+  try {
+    // Check if localStorage has the cache
+    if (typeof window !== 'undefined' && window.localStorage) {
+      isPersisted = Boolean(localStorage.getItem(CACHE_KEY));
+    }
+  } catch (err) {
+    console.warn('Failed to check localStorage persistence:', err);
+  }
   
   if (hasData) {
     lastUpdated = new Date(asanaCache.timestamp).toLocaleString();
@@ -124,6 +185,7 @@ export function getCacheStatus(): {
     hasData,
     lastUpdated,
     projectCount: asanaCache.projects.length,
-    expiresIn
+    expiresIn,
+    isPersisted
   };
 }

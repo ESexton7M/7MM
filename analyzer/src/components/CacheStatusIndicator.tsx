@@ -9,12 +9,14 @@ const CacheStatusIndicator: React.FC = () => {
     hasData: boolean,
     lastUpdated: string | null,
     projectCount: number,
-    expiresIn: string | null
+    expiresIn: string | null,
+    isPersisted: boolean
   }>({
     hasData: false,
     lastUpdated: null,
     projectCount: 0,
-    expiresIn: null
+    expiresIn: null,
+    isPersisted: false
   });
   
   // Fetch cache status every 30 seconds
@@ -49,6 +51,7 @@ const CacheStatusIndicator: React.FC = () => {
         Cached {cacheStatus.projectCount} projects 
         <span className="hidden sm:inline"> • Last updated: {cacheStatus.lastUpdated}</span>
         {cacheStatus.expiresIn && <span className="hidden sm:inline"> • Expires in: {cacheStatus.expiresIn}</span>}
+        {cacheStatus.isPersisted && <span className="hidden sm:inline text-green-400"> • Saved to browser storage</span>}
       </span>
     </div>
   );
