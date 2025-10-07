@@ -18,6 +18,7 @@ const CACHE_DIR = path.join(__dirname, 'cache');
 const PROJECTS_CACHE_FILE = path.join(CACHE_DIR, 'projects.json');
 const ANALYZED_CACHE_FILE = path.join(CACHE_DIR, 'analyzed.json');
 const CACHE_METADATA_FILE = path.join(CACHE_DIR, 'metadata.json');
+const PROJECT_TASKS_CACHE_DIR = path.join(CACHE_DIR, 'project_tasks');
 
 // Cache expiration time (2 days in milliseconds)
 const CACHE_EXPIRATION = 2 * 24 * 60 * 60 * 1000;
@@ -29,6 +30,13 @@ async function ensureCacheDir() {
   } catch (error) {
     await fs.mkdir(CACHE_DIR, { recursive: true });
     console.log('Created cache directory');
+  }
+  
+  try {
+    await fs.access(PROJECT_TASKS_CACHE_DIR);
+  } catch (error) {
+    await fs.mkdir(PROJECT_TASKS_CACHE_DIR, { recursive: true });
+    console.log('Created project tasks cache directory');
   }
 }
 
@@ -106,6 +114,74 @@ app.get('/api/cache/status', async (req, res) => {
   }
 });
 
+// Health check endpoint for Plesk verification
+app.get('/api/health', async (req, res) => {
+  try {
+    const metadata = await getCacheMetadata();
+    const now = Date.now();
+    const uptime = process.uptime();
+    
+    // Check cache directory
+    let cacheStats = {};
+    try {
+      const cacheFiles = await fs.readdir(CACHE_DIR);
+      cacheStats = {
+        directory: CACHE_DIR,
+        filesCount: cacheFiles.length,
+        files: cacheFiles,
+        hasProjects: cacheFiles.includes('projects.json'),
+        hasAnalyzed: cacheFiles.includes('analyzed.json'),
+        hasMetadata: cacheFiles.includes('metadata.json')
+      };
+    } catch (error) {
+      cacheStats = { error: 'Cache directory not accessible' };
+    }
+    
+    // Calculate next refresh time
+    const nextRefresh = new Date();
+    nextRefresh.setDate(nextRefresh.getDate() + 2);
+    nextRefresh.setHours(0, 0, 0, 0);
+    
+    res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      server: {
+        uptime: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m`,
+        port: PORT,
+        environment: process.env.NODE_ENV || 'development',
+        nodeVersion: process.version
+      },
+      cache: {
+        ...cacheStats,
+        isValid: isCacheValid(metadata.projectsTimestamp),
+        lastUpdate: metadata.projectsTimestamp > 0 ? new Date(metadata.projectsTimestamp).toISOString() : null,
+        expiresAt: metadata.projectsTimestamp > 0 ? new Date(metadata.projectsTimestamp + CACHE_EXPIRATION).toISOString() : null,
+        projectCount: metadata.projectCount || 0
+      },
+      features: {
+        mobileResponsive: true,
+        serverSideCache: true,
+        automaticRefresh: true,
+        sectionSorting: true,
+        zeroDayFiltering: true,
+        portConflictResolution: true
+      },
+      schedule: {
+        nextRefresh: nextRefresh.toISOString(),
+        refreshInterval: '2 days',
+        cronPattern: '0 0 */2 * *'
+      }
+    });
+  } catch (error) {
+    console.error('Health check error:', error);
+    res.status(500).json({ 
+      status: 'unhealthy',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Get cached projects
 app.get('/api/cache/projects', async (req, res) => {
   try {
@@ -179,6 +255,49 @@ app.post('/api/cache/analyzed', async (req, res) => {
   }
 });
 
+// Get cached project tasks
+app.get('/api/cache/project/:projectId/tasks', async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const tasksCacheFile = path.join(PROJECT_TASKS_CACHE_DIR, `${projectId}.json`);
+    
+    // Check if file exists and is valid
+    try {
+      const stats = await fs.stat(tasksCacheFile);
+      const fileAge = Date.now() - stats.mtime.getTime();
+      
+      if (fileAge > CACHE_EXPIRATION) {
+        return res.status(404).json({ error: 'Project tasks cache expired' });
+      }
+      
+      const data = await fs.readFile(tasksCacheFile, 'utf8');
+      res.json(JSON.parse(data));
+    } catch (error) {
+      res.status(404).json({ error: 'Project tasks not cached' });
+    }
+  } catch (error) {
+    console.error('Error reading project tasks cache:', error);
+    res.status(500).json({ error: 'Failed to read project tasks cache' });
+  }
+});
+
+// Save project tasks to cache
+app.post('/api/cache/project/:projectId/tasks', async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const tasks = req.body;
+    const tasksCacheFile = path.join(PROJECT_TASKS_CACHE_DIR, `${projectId}.json`);
+    
+    await fs.writeFile(tasksCacheFile, JSON.stringify(tasks, null, 2));
+    
+    console.log(`Cached tasks for project ${projectId}`);
+    res.json({ success: true, timestamp: Date.now() });
+  } catch (error) {
+    console.error('Error saving project tasks cache:', error);
+    res.status(500).json({ error: 'Failed to save project tasks cache' });
+  }
+});
+
 // Clear cache
 app.delete('/api/cache/clear', async (req, res) => {
   try {
@@ -190,6 +309,19 @@ app.delete('/api/cache/clear', async (req, res) => {
       } catch (error) {
         // File might not exist, which is fine
       }
+    }
+    
+    // Clear project tasks cache directory
+    try {
+      const taskFiles = await fs.readdir(PROJECT_TASKS_CACHE_DIR);
+      for (const file of taskFiles) {
+        if (file.endsWith('.json')) {
+          await fs.unlink(path.join(PROJECT_TASKS_CACHE_DIR, file));
+        }
+      }
+      console.log('Cleared project tasks cache');
+    } catch (error) {
+      // Directory might not exist or be empty
     }
     
     await saveCacheMetadata({

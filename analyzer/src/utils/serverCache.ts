@@ -94,21 +94,45 @@ export async function getCachedProjects(): Promise<Task[]> {
 }
 
 /**
- * Store project tasks in the cache (not implemented in server version)
- * Individual project tasks are not cached server-side to keep cache size manageable
+ * Store project tasks in the server cache
  */
-export async function cacheProjectTasks(_projectId: string, _tasks: Task[]): Promise<void> {
-  // Server-side version doesn't cache individual project tasks
-  // to keep the cache size manageable and focus on the main project list
-  console.log(`Project tasks for ${_projectId} not cached server-side`);
+export async function cacheProjectTasks(projectId: string, tasks: Task[]): Promise<void> {
+  try {
+    const response = await fetch(`${API_BASE}/api/cache/project/${projectId}/tasks`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(tasks),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to cache project tasks: ${response.statusText}`);
+    }
+    
+    console.log(`Project tasks for ${projectId} cached on server`);
+  } catch (error) {
+    console.warn(`Failed to cache tasks for project ${projectId}:`, error);
+  }
 }
 
 /**
- * Get project tasks from cache (not implemented in server version)
+ * Get project tasks from server cache
  */
-export async function getCachedProjectTasks(_projectId: string): Promise<Task[] | null> {
-  // Server-side version doesn't cache individual project tasks
-  return null;
+export async function getCachedProjectTasks(projectId: string): Promise<Task[] | null> {
+  try {
+    const response = await fetch(`${API_BASE}/api/cache/project/${projectId}/tasks`);
+    if (!response.ok) {
+      return null;
+    }
+    
+    const tasks = await response.json();
+    console.log(`Using cached tasks for project ${projectId} from server`);
+    return tasks;
+  } catch (error) {
+    console.warn(`Failed to get cached tasks for project ${projectId}:`, error);
+    return null;
+  }
 }
 
 /**
