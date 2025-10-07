@@ -11,8 +11,11 @@
     "dev": "cd analyzer && npm run dev",
     "build": "cd analyzer && npm run build",
     "lint": "cd analyzer && npm run lint",
-    "install:all": "npm install && cd analyzer && npm install && npm run install:server",
+    "install:all": "npm install && cd analyzer && npm install && cd server && npm install",
+    "install:server": "cd analyzer/server && npm install",
     "server:start": "cd analyzer/server && npm start",
-    "server:dev": "cd analyzer/server && npm run dev"
+    "server:dev": "cd analyzer/server && npm run dev",
+    "deploy": "npm run install:all && npm run build && npm run server:start",
+    "deploy:plesk": "npm install && cd analyzer && npm install && cd server && npm install && cd .. && npm run build && echo 'Setup complete! Now run: npm run server:start'"
   }
 }
