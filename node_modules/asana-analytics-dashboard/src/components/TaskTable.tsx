@@ -1,5 +1,6 @@
 import type { FC } from 'react';
 import type { Task } from '../types';
+import { daysToWeeks } from '../utils/statistics';
 
 interface TaskTableProps {
   tasks: Task[];
@@ -24,7 +25,14 @@ const TaskTable: FC<TaskTableProps> = ({ tasks }) => {
     const completedDate = new Date(completed);
     if (isNaN(createdDate.getTime()) || isNaN(completedDate.getTime())) return '';
     const diff = Math.round((completedDate.getTime() - createdDate.getTime()) / (1000 * 3600 * 24));
-    return diff >= 0 ? diff.toString() : '';
+    if (diff < 0) return '';
+    
+    // Show weeks for longer durations
+    if (diff >= 14) {
+      const weeks = daysToWeeks(diff);
+      return `${weeks} weeks (${diff} days)`;
+    }
+    return `${diff} days`;
   };
 
   return (
@@ -47,7 +55,7 @@ const TaskTable: FC<TaskTableProps> = ({ tasks }) => {
               <th scope="col" className="px-2 xs:px-4 sm:px-6 py-2 sm:py-3 tracking-wider">Created On</th>
               <th scope="col" className="px-2 xs:px-4 sm:px-6 py-2 sm:py-3 tracking-wider">Due On</th>
               <th scope="col" className="px-2 xs:px-4 sm:px-6 py-2 sm:py-3 tracking-wider">Completed On</th>
-              <th scope="col" className="px-2 xs:px-4 sm:px-6 py-2 sm:py-3 tracking-wider">Days Between</th>
+              <th scope="col" className="px-2 xs:px-4 sm:px-6 py-2 sm:py-3 tracking-wider">Duration</th>
               <th scope="col" className="px-2 xs:px-4 sm:px-6 py-2 sm:py-3 tracking-wider">Status</th>
             </tr>
           </thead>

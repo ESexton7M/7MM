@@ -10,13 +10,15 @@ const CacheStatusIndicator: React.FC = () => {
     lastUpdated: string | null,
     projectCount: number,
     expiresIn: string | null,
-    isPersisted: boolean
+    isPersisted: boolean,
+    isExpired: boolean
   }>({
     hasData: false,
     lastUpdated: null,
     projectCount: 0,
     expiresIn: null,
-    isPersisted: false
+    isPersisted: false,
+    isExpired: false
   });
   
   // Fetch cache status every 30 seconds
@@ -45,12 +47,12 @@ const CacheStatusIndicator: React.FC = () => {
   }
 
   return (
-    <div className="flex items-center text-xs sm:text-sm text-gray-400">
+    <div className={`flex items-center text-xs sm:text-sm ${cacheStatus.isExpired ? 'text-orange-400' : 'text-gray-400'}`}>
       <Clock className="h-4 w-4 mr-1" />
       <span>
-        Cached {cacheStatus.projectCount} projects 
+        {cacheStatus.isExpired ? 'Expired cache: ' : 'Cached '}{cacheStatus.projectCount} projects 
         <span className="hidden sm:inline"> • Last updated: {cacheStatus.lastUpdated}</span>
-        {cacheStatus.expiresIn && <span className="hidden sm:inline"> • Expires in: {cacheStatus.expiresIn}</span>}
+        {cacheStatus.expiresIn && <span className="hidden sm:inline"> • {cacheStatus.isExpired ? cacheStatus.expiresIn : `Expires in: ${cacheStatus.expiresIn}`}</span>}
         {cacheStatus.isPersisted && <span className="hidden sm:inline text-green-400"> • Saved to browser storage</span>}
       </span>
     </div>

@@ -3,6 +3,12 @@ import type { ProjectDuration, Task } from '../types';
 import ProjectDurationChart from './ProjectDurationChart';
 import { getSectionCategoryColor } from '../config/sectionPhases';
 import { 
+  daysToWeeks, 
+  formatDurationInWeeks, 
+  calculateStatistics, 
+  formatNumber 
+} from '../utils/statistics';
+import { 
   BarChart, 
   Bar, 
   XAxis, 
@@ -24,17 +30,50 @@ const REQUIRED_SECTIONS = [
 interface ComparisonTabsProps {
   projectDurations: (ProjectDuration & { gid?: string })[];
   highlightedProjects: string[];
+  sortMethod: string;
 }
 
 type ComparisonMode = 'projects' | 'sections';
 type TabId = ComparisonMode | string;
 
-const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highlightedProjects }) => {
+const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highlightedProjects, sortMethod }) => {
   const [activeTab, setActiveTab] = useState<TabId>('projects');
   // Start with the first required section as the default
   const [selectedSection, setSelectedSection] = useState<string>(REQUIRED_SECTIONS[0] || '');
   // Use our predefined sections instead of fetching from tasks
   const availableSections = REQUIRED_SECTIONS;
+
+  // Helper function to sort section comparison data
+  const sortSectionData = (data: any[], sortMethod: string) => {
+    const sorted = [...data];
+    switch (sortMethod) {
+      case 'created-asc':
+      case 'created-desc':
+        // For sections, we don't have created dates, so fall back to alphabetical
+        return sortMethod === 'created-asc' 
+          ? sorted.sort((a, b) => a.name.localeCompare(b.name))
+          : sorted.sort((a, b) => b.name.localeCompare(a.name));
+      case 'completed-asc':
+        return sorted.sort((a, b) => {
+          if (!a.completed || !b.completed) return 0;
+          return new Date(a.completed).getTime() - new Date(b.completed).getTime();
+        });
+      case 'completed-desc':
+        return sorted.sort((a, b) => {
+          if (!a.completed || !b.completed) return 0;
+          return new Date(b.completed).getTime() - new Date(a.completed).getTime();
+        });
+      case 'alpha-asc':
+        return sorted.sort((a, b) => a.name.localeCompare(b.name));
+      case 'alpha-desc':
+        return sorted.sort((a, b) => b.name.localeCompare(a.name));
+      case 'duration-desc':
+        return sorted.sort((a, b) => b.duration - a.duration);
+      case 'duration-asc':
+      default:
+        return sorted.sort((a, b) => a.duration - b.duration);
+    }
+  };
 
   // State to hold section-specific data
   const [projectSectionData, setProjectSectionData] = useState<
@@ -351,7 +390,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
       activeTab.startsWith('section-') ? activeTab.replace('section-', '') : selectedSection;
     
     // For each project, create a bar data item for the chart
-    return projectDurations
+    const unsortedData = projectDurations
       .map(project => {
         const isHighlighted = highlightedProjects.some(h => 
           project.name.toLowerCase().includes(h.toLowerCase())
@@ -370,9 +409,11 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
           section: sectionToCompare
         };
       })
-      .filter(item => item.duration > 0) // Only include items with valid durations
-      .sort((a, b) => a.duration - b.duration);
-  }, [activeTab, selectedSection, projectDurations, highlightedProjects, projectSectionData]);
+      .filter(item => item.duration > 0); // Only include items with valid durations
+    
+    // Apply sorting using the sortSectionData function
+    return sortSectionData(unsortedData, sortMethod);
+  }, [activeTab, selectedSection, projectDurations, highlightedProjects, projectSectionData, sortMethod]);
 
   // Custom tooltip for section comparison
   const SectionTooltip: React.FC<any> = ({ active, payload }) => {
@@ -384,7 +425,10 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
       <div className="bg-gray-800 p-3 border border-gray-700 rounded-lg shadow-lg">
         <p className="text-gray-200 font-bold mb-1">{data.name}</p>
         <p className="text-gray-300">
-          <span className="text-indigo-400 font-semibold">{data.duration} days</span> for {data.section}
+          <span className="text-indigo-400 font-semibold">{formatDurationInWeeks(data.duration)}</span> for {data.section}
+        </p>
+        <p className="text-gray-400 text-xs">
+          ({data.duration} days)
         </p>
         {data.completed && (
           <p className="text-gray-400 text-sm mt-1">
@@ -398,9 +442,9 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
   return (
     <div className="space-y-4">
       {/* Tabs */}
-      <div className="flex border-b border-gray-700">
+      <div className="flex flex-col sm:flex-row border-b border-gray-700">
         <button
-          className={`py-2 px-4 font-medium ${
+          className={`py-2 px-3 sm:px-4 font-medium text-sm sm:text-base ${
             activeTab === 'projects'
               ? 'text-blue-400 border-b-2 border-blue-400'
               : 'text-gray-400 hover:text-gray-300'
@@ -412,7 +456,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
         
         <div className="relative group">
           <button
-            className={`py-2 px-4 font-medium flex items-center ${
+            className={`py-2 px-3 sm:px-4 font-medium flex items-center text-sm sm:text-base ${
               activeTab === 'sections' || activeTab.startsWith('section-')
                 ? 'text-blue-400 border-b-2 border-blue-400'
                 : 'text-gray-400 hover:text-gray-300'
@@ -421,7 +465,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
           >
             Section Comparison
             <svg
-              className="w-4 h-4 ml-1"
+              className="w-3 h-3 sm:w-4 sm:h-4 ml-1"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -437,11 +481,11 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
           </button>
           
           {/* Dropdown for section selection */}
-          <div className="absolute left-0 hidden z-10 mt-1 w-48 bg-gray-800 rounded-md shadow-lg border border-gray-700 group-hover:block">
+          <div className="absolute left-0 hidden z-10 mt-1 w-44 sm:w-48 bg-gray-800 rounded-md shadow-lg border border-gray-700 group-hover:block">
             {availableSections.map((section: string) => (
               <button
                 key={section}
-                className={`block w-full text-left px-4 py-2 text-sm ${
+                className={`block w-full text-left px-3 sm:px-4 py-2 text-xs sm:text-sm ${
                   (activeTab === 'sections' && selectedSection === section) || activeTab === `section-${section}`
                     ? 'bg-gray-700 text-blue-400'
                     : 'text-gray-300 hover:bg-gray-700'
@@ -453,10 +497,10 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
               >
                 <div className="flex items-center">
                   <div
-                    className="w-3 h-3 rounded-sm mr-2"
-                    style={{ backgroundColor: getSectionCategoryColor(section) || '#4f46e5' }}
+                    className="w-2 h-2 sm:w-3 sm:h-3 rounded-sm mr-2"
+                    style={{ backgroundColor: getSectionCategoryColor(section) }}
                   />
-                  {section}
+                  <span className="truncate">{section}</span>
                 </div>
               </button>
             ))}
@@ -491,33 +535,35 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
             </div>
 
             {sectionComparisonData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={400}>
+              <ResponsiveContainer width="100%" height={300} className="sm:!h-[400px]">
                 <BarChart
                   data={sectionComparisonData}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  margin={{ top: 20, right: 15, left: 10, bottom: 5 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
                   <XAxis
                     dataKey="name"
                     stroke="#A0AEC0"
-                    hide={sectionComparisonData.length > 10}
+                    hide={sectionComparisonData.length > 8}
+                    fontSize={12}
                   />
                   <YAxis
                     stroke="#A0AEC0"
+                    fontSize={12}
                     label={{
-                      value: 'Days to Complete',
+                      value: 'Days',
                       angle: -90,
                       position: 'insideLeft',
                       fill: '#E2E8F0',
-                      offset: 10,
-                      style: { fontWeight: 600 }
+                      offset: 0,
+                      style: { fontWeight: 600, fontSize: 12 }
                     }}
                   />
                   <Tooltip content={<SectionTooltip />} />
                   <Bar
                     dataKey="duration"
                     name={`${selectedSection} Duration`}
-                    maxBarSize={50}
+                    maxBarSize={40}
                   >
                     {sectionComparisonData.map((entry, index) => (
                       <Cell
@@ -538,32 +584,117 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
             {/* Section statistics */}
             {sectionComparisonData.length > 0 && (
               <div className="mt-6 pt-6 border-t border-gray-700">
-                <h3 className="text-lg font-semibold mb-2">Statistics for {selectedSection}</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="bg-gray-800 p-4 rounded-md">
-                    <p className="text-sm text-gray-400">Average Duration</p>
-                    <p className="text-2xl font-bold">
-                      {Math.round(sectionComparisonData.reduce((sum, p) => sum + p.duration, 0) / sectionComparisonData.length)} days
-                    </p>
-                  </div>
+                <h3 className="text-lg font-semibold mb-4">Statistics for {selectedSection}</h3>
+                
+                {(() => {
+                  // Calculate comprehensive statistics
+                  const durations = sectionComparisonData.map(d => d.duration);
+                  const stats = calculateStatistics(durations);
+                  const statsInWeeks = {
+                    mean: daysToWeeks(stats.mean),
+                    median: daysToWeeks(stats.median),
+                    range: daysToWeeks(stats.range),
+                    skewness: stats.skewness, // Skewness is dimensionless
+                    standardDeviation: daysToWeeks(stats.standardDeviation),
+                    min: daysToWeeks(stats.min || 0),
+                    max: daysToWeeks(stats.max || 0),
+                    count: stats.count
+                  };
                   
-                  <div className="bg-gray-800 p-4 rounded-md">
-                    <p className="text-sm text-gray-400">Shortest</p>
-                    <p className="text-2xl font-bold">
-                      {sectionComparisonData.length > 0 ? `${sectionComparisonData[0]?.duration || 0} days` : 'N/A'}
-                    </p>
-                    <p className="text-xs truncate">{sectionComparisonData[0]?.name || ''}</p>
-                  </div>
-                  
-                  <div className="bg-gray-800 p-4 rounded-md">
-                    <p className="text-sm text-gray-400">Longest</p>
-                    <p className="text-2xl font-bold">
-                      {sectionComparisonData.length > 0 ? 
-                        `${sectionComparisonData[sectionComparisonData.length-1]?.duration || 0} days` : 'N/A'}
-                    </p>
-                    <p className="text-xs truncate">{sectionComparisonData[sectionComparisonData.length-1]?.name || ''}</p>
-                  </div>
-                </div>
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div className="bg-gray-800 p-4 rounded-md">
+                        <p className="text-sm text-gray-400">Mean Duration</p>
+                        <p className="text-2xl font-bold">
+                          {formatNumber(statsInWeeks.mean)} weeks
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          ({formatNumber(stats.mean)} days)
+                        </p>
+                      </div>
+                      
+                      <div className="bg-gray-800 p-4 rounded-md">
+                        <p className="text-sm text-gray-400">Median Duration</p>
+                        <p className="text-2xl font-bold">
+                          {formatNumber(statsInWeeks.median)} weeks
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          ({formatNumber(stats.median)} days)
+                        </p>
+                      </div>
+                      
+                      <div className="bg-gray-800 p-4 rounded-md">
+                        <p className="text-sm text-gray-400">Range Duration</p>
+                        <p className="text-2xl font-bold">
+                          {formatNumber(statsInWeeks.range)} weeks
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          ({formatNumber(stats.range)} days)
+                        </p>
+                      </div>
+                      
+                      <div className="bg-gray-800 p-4 rounded-md">
+                        <p className="text-sm text-gray-400">Skewness</p>
+                        <p className="text-2xl font-bold">
+                          {formatNumber(statsInWeeks.skewness, 2)}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {stats.skewness > 0 ? 'Right-skewed' : stats.skewness < 0 ? 'Left-skewed' : 'Symmetric'}
+                        </p>
+                      </div>
+                      
+                      <div className="bg-gray-800 p-4 rounded-md">
+                        <p className="text-sm text-gray-400">Standard Deviation</p>
+                        <p className="text-2xl font-bold">
+                          {formatNumber(statsInWeeks.standardDeviation)} weeks
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          ({formatNumber(stats.standardDeviation)} days)
+                        </p>
+                      </div>
+                      
+                      <div className="bg-gray-800 p-4 rounded-md">
+                        <p className="text-sm text-gray-400">Shortest Duration</p>
+                        <p className="text-2xl font-bold">
+                          {statsInWeeks.count > 0 ? `${statsInWeeks.min} weeks` : 'N/A'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {stats.count > 0 ? `(${formatNumber(stats.min || 0)} days)` : ''}
+                        </p>
+                        {sectionComparisonData.length > 0 && (
+                          <p className="text-xs truncate text-gray-400 mt-1">
+                            {sectionComparisonData[0]?.name || ''}
+                          </p>
+                        )}
+                      </div>
+                      
+                      <div className="bg-gray-800 p-4 rounded-md">
+                        <p className="text-sm text-gray-400">Longest Duration</p>
+                        <p className="text-2xl font-bold">
+                          {statsInWeeks.count > 0 ? `${statsInWeeks.max} weeks` : 'N/A'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {stats.count > 0 ? `(${formatNumber(stats.max || 0)} days)` : ''}
+                        </p>
+                        {sectionComparisonData.length > 0 && (
+                          <p className="text-xs truncate text-gray-400 mt-1">
+                            {sectionComparisonData[sectionComparisonData.length-1]?.name || ''}
+                          </p>
+                        )}
+                      </div>
+                      
+                      <div className="bg-gray-800 p-4 rounded-md">
+                        <p className="text-sm text-gray-400">Sample Size</p>
+                        <p className="text-2xl font-bold">
+                          {statsInWeeks.count} projects
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          with {selectedSection} data
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>

@@ -61,6 +61,16 @@ export function isCacheValid(): boolean {
 }
 
 /**
+ * Clear cache if it's expired
+ */
+export function clearExpiredCache(): void {
+  if (!isCacheValid() && asanaCache.timestamp > 0) {
+    console.log('Cache expired, clearing...');
+    clearCache();
+  }
+}
+
+/**
  * Save the current cache state to localStorage
  */
 function saveCache(): void {
@@ -156,10 +166,12 @@ export function getCacheStatus(): {
   lastUpdated: string | null,
   projectCount: number,
   expiresIn: string | null,
-  isPersisted: boolean
+  isPersisted: boolean,
+  isExpired: boolean
 } {
   const now = Date.now();
   const hasData = asanaCache.timestamp > 0;
+  const isExpired = hasData && !isCacheValid();
   let lastUpdated = null;
   let expiresIn = null;
   let isPersisted = false;
@@ -178,7 +190,14 @@ export function getCacheStatus(): {
     const expirationMs = CACHE_EXPIRATION - (now - asanaCache.timestamp);
     const expirationHours = Math.floor(expirationMs / (60 * 60 * 1000));
     const expirationMinutes = Math.floor((expirationMs % (60 * 60 * 1000)) / (60 * 1000));
-    expiresIn = `${expirationHours}h ${expirationMinutes}m`;
+    
+    if (isExpired) {
+      const overageHours = Math.floor(Math.abs(expirationMs) / (60 * 60 * 1000));
+      const overageMinutes = Math.floor((Math.abs(expirationMs) % (60 * 60 * 1000)) / (60 * 1000));
+      expiresIn = `Expired ${overageHours}h ${overageMinutes}m ago`;
+    } else {
+      expiresIn = `${expirationHours}h ${expirationMinutes}m`;
+    }
   }
   
   return {
@@ -186,6 +205,7 @@ export function getCacheStatus(): {
     lastUpdated,
     projectCount: asanaCache.projects.length,
     expiresIn,
-    isPersisted
+    isPersisted,
+    isExpired
   };
 }

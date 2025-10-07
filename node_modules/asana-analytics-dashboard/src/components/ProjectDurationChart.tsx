@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 
 import type { ProjectDurationChartProps } from '../types';
+import { formatDurationInWeeks, daysToWeeks } from '../utils/statistics';
 
 /**
  * ProjectDurationChart - Visualizes project completion durations with highlighting capability
@@ -27,6 +28,8 @@ const ProjectDurationChart: FC<ProjectDurationChartProps> = ({
   const processedDurations = useMemo(() => {
     return durations.map(duration => ({
       ...duration,
+      duration: daysToWeeks(duration.duration), // Convert to weeks for display
+      originalDuration: duration.duration, // Keep original for tooltip
       highlighted: shouldHighlight && 
         highlightedProjects.some(query => 
           duration.name.toLowerCase().includes(query.toLowerCase()))
@@ -58,7 +61,10 @@ const ProjectDurationChart: FC<ProjectDurationChartProps> = ({
       <div className="bg-gray-800 p-3 border border-gray-700 rounded-lg shadow-lg">
         <p className="text-gray-200 font-bold mb-1">{data.name}</p>
         <p className="text-gray-300">
-          <span className="text-indigo-400 font-semibold">{data.duration} days</span> to complete
+          <span className="text-indigo-400 font-semibold">{formatDurationInWeeks(data.originalDuration || data.duration)}</span> to complete
+        </p>
+        <p className="text-gray-400 text-xs">
+          ({data.originalDuration || data.duration} days)
         </p>
         {showDates && (
           <div className="text-xs text-gray-400 mt-2">
@@ -72,33 +78,35 @@ const ProjectDurationChart: FC<ProjectDurationChartProps> = ({
 
   return (
     <div className="w-full h-full">
-      <ResponsiveContainer width="100%" height={400}>
+      <ResponsiveContainer width="100%" height={300} className="sm:!h-[400px]">
         <BarChart
           data={processedDurations}
-          margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+          margin={{ top: 20, right: 15, left: 10, bottom: 5 }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
           <XAxis 
             dataKey="name" 
             stroke="#A0AEC0" 
-            hide={processedDurations.length > 10} // Hide axis if too many items
+            hide={processedDurations.length > 8} // Hide axis if too many items on mobile
+            fontSize={12}
           />
           <YAxis
             stroke="#A0AEC0"
+            fontSize={12}
             label={{
-              value: 'Days to Complete',
+              value: 'Weeks',
               angle: -90,
               position: 'insideLeft',
               fill: '#E2E8F0',
-              offset: 10,
-              style: { fontWeight: 600 }
+              offset: 0,
+              style: { fontWeight: 600, fontSize: 12 }
             }}
           />
           <Tooltip content={<CustomTooltip />} />
           <Bar
             dataKey="duration"
             name="Completion Duration"
-            maxBarSize={50}
+            maxBarSize={40}
           >
             {processedDurations.map((entry, index) => (
               <Cell
@@ -111,7 +119,7 @@ const ProjectDurationChart: FC<ProjectDurationChartProps> = ({
         </BarChart>
       </ResponsiveContainer>
       {processedDurations.length > 15 && (
-        <p className="text-center text-gray-400 mt-2 text-sm">
+        <p className="text-center text-gray-400 mt-2 text-xs sm:text-sm">
           Tip: Use search filters to narrow down projects for better visibility
         </p>
       )}

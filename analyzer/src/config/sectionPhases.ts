@@ -5,9 +5,9 @@
 
 // Standard phase categories
 export const standardPhaseCategories = [
-    'Onboarding',
-    'Design',
-    'Development',
+    'Onboarding Phase',
+    'Mockup Phase', 
+    'Development Phase',
     'Launch'
 ];
 
@@ -49,7 +49,11 @@ export const phaseNameMappings: Record<string, string[]> = {
         'phase 1',
         'phase one',
         'contract',
-        'agreement'
+        'agreement',
+        // Additional mappings
+        'initial setup',
+        'preparation',
+        'client onboarding'
     ],
     'Design': [
         // Exact matches
@@ -91,7 +95,11 @@ export const phaseNameMappings: Record<string, string[]> = {
         'phase two',
         'artboard',
         'artwork',
-        'illustration'
+        'illustration',
+        // Additional mappings
+        'conceptualization',
+        'blueprint',
+        'drafting'
     ],
     'Development': [
         // Exact matches
@@ -143,7 +151,11 @@ export const phaseNameMappings: Record<string, string[]> = {
         'verification',
         'bug fixing',
         'fixes',
-        'debugging'
+        'debugging',
+        // Additional mappings
+        'implementation',
+        'feature development',
+        'module creation'
     ],
     'Launch': [
         // Exact matches
@@ -183,7 +195,11 @@ export const phaseNameMappings: Record<string, string[]> = {
         'maintenance',
         'support',
         'post-launch',
-        'training'
+        'training',
+        // Additional mappings
+        'go-live',
+        'final delivery',
+        'handover'
     ]
 };
 
@@ -231,25 +247,69 @@ export function standardizeSectionName(sectionName: string): string {
  * @returns A hex color code
  */
 export function getSectionCategoryColor(category: string, isInProgress?: boolean): string {
+    // Normalize the category name for consistent matching
+    const normalizedCategory = category.trim();
+    
     const colorMap: Record<string, string> = {
-        'Onboarding': '#3b82f6',  // Blue
-        'Design': '#8b5cf6',      // Purple
-        'Development': '#10b981', // Green
-        'Launch': '#f59e0b',      // Amber
-        'Other': '#6b7280'        // Gray
+        // Onboarding variations
+        'Onboarding': '#3b82f6',         // Bright Blue
+        'Onboarding Phase': '#3b82f6',   // Bright Blue
+        'onboarding': '#3b82f6',         // Bright Blue
+        'onboarding phase': '#3b82f6',   // Bright Blue
+        
+        // Design/Mockup variations  
+        'Design': '#8b5cf6',             // Purple
+        'Mockup Phase': '#8b5cf6',       // Purple
+        'Mockup': '#8b5cf6',             // Purple
+        'design': '#8b5cf6',             // Purple
+        'mockup': '#8b5cf6',             // Purple
+        'mockup phase': '#8b5cf6',       // Purple
+        
+        // Development variations
+        'Development': '#10b981',        // Emerald Green
+        'Development Phase': '#10b981',  // Emerald Green
+        'development': '#10b981',        // Emerald Green
+        'development phase': '#10b981',  // Emerald Green
+        
+        // Launch variations
+        'Launch': '#f59e0b',             // Amber
+        'launch': '#f59e0b',             // Amber
+        
+        // Other
+        'Other': '#6b7280'               // Gray
     };
     
     if (isInProgress) {
         // Return a lighter, less saturated version of the color for in-progress sections
         const inProgressColorMap: Record<string, string> = {
-            'Onboarding': '#60a5fa',  // Lighter Blue
-            'Design': '#a78bfa',      // Lighter Purple
-            'Development': '#34d399', // Lighter Green
-            'Launch': '#fcd34d',      // Lighter Amber
-            'Other': '#9ca3af'        // Lighter Gray
+            'Onboarding': '#60a5fa',         // Lighter Blue
+            'Onboarding Phase': '#60a5fa',   // Lighter Blue
+            'onboarding': '#60a5fa',         // Lighter Blue
+            'onboarding phase': '#60a5fa',   // Lighter Blue
+            
+            'Design': '#a78bfa',             // Lighter Purple
+            'Mockup Phase': '#a78bfa',       // Lighter Purple
+            'Mockup': '#a78bfa',             // Lighter Purple
+            'design': '#a78bfa',             // Lighter Purple
+            'mockup': '#a78bfa',             // Lighter Purple
+            'mockup phase': '#a78bfa',       // Lighter Purple
+            
+            'Development': '#34d399',        // Lighter Green
+            'Development Phase': '#34d399',  // Lighter Green
+            'development': '#34d399',        // Lighter Green
+            'development phase': '#34d399',  // Lighter Green
+            
+            'Launch': '#fcd34d',             // Lighter Amber
+            'launch': '#fcd34d',             // Lighter Amber
+            
+            'Other': '#9ca3af'               // Lighter Gray
         };
-        return inProgressColorMap[category] || '#9ca3af';
+        const color = inProgressColorMap[normalizedCategory] || '#9ca3af';
+        console.log(`DEBUG getSectionCategoryColor (in-progress): "${normalizedCategory}" -> ${color}`);
+        return color;
     }
     
-    return colorMap[category] || '#6b7280'; // Default gray
+    const color = colorMap[normalizedCategory] || '#6b7280';
+    console.log(`DEBUG getSectionCategoryColor: "${normalizedCategory}" -> ${color}`);
+    return color;
 }

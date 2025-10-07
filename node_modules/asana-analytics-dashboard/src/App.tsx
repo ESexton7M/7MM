@@ -7,6 +7,12 @@ import DashboardView from './components/DashboardView';
 import GoogleLogin from './components/GoogleLogin';
 import CacheStatusIndicator from './components/CacheStatusIndicator';
 import { ComparisonTabs } from './components/ComparisonTabs';
+import { AnimatedSection } from './hooks/useAnimations';
+import { 
+  calculateStatistics, 
+  daysToWeeks, 
+  formatNumber 
+} from './utils/statistics';
 
 // Import types
 import type { 
@@ -309,15 +315,20 @@ export default function App() {
                 getCachedProjectTasks,
                 cacheProjectTasks,
                 getCachedAnalyzedData,
-                cacheAnalyzedData
+                cacheAnalyzedData,
+                clearExpiredCache
             } = await import('./utils/asanaCache');
+            
+            // Clear expired cache first
+            clearExpiredCache();
             
             // First check if we have valid cached analysis data
             const cachedAnalyzedData = getCachedAnalyzedData();
-            if (cachedAnalyzedData && cachedAnalyzedData.length > 0) {
+            if (isCacheValid() && cachedAnalyzedData && cachedAnalyzedData.length > 0) {
                 console.log('Using cached analyzed data');
-                // Sort cached data based on current sort preference
-                const sorted = [...cachedAnalyzedData];
+                // Filter out 0-day projects from cached data and sort based on current sort preference
+                const filtered = cachedAnalyzedData.filter(project => project.duration > 0);
+                const sorted = [...filtered];
                 sortProjectDurations(sorted, projectSort);
                 setProjectDurations(sorted);
                 setAnalyzing(false);
@@ -436,7 +447,7 @@ export default function App() {
                             if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
                                 const duration = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
                                 
-                                if (duration >= 0) {
+                                if (duration > 0) { // Exclude projects completed in 0 days
                                     durations.push({
                                         name: project.name,
                                         duration,
@@ -528,8 +539,12 @@ export default function App() {
                 isCacheValid, 
                 getCachedProjects, 
                 cacheProjects,
-                clearCache
+                clearCache,
+                clearExpiredCache
             } = await import('./utils/asanaCache');
+            
+            // Clear expired cache first
+            clearExpiredCache();
             
             // Check cache first if not forcing refresh
             if (!forceRefresh && isCacheValid() && getCachedProjects().length > 0) {
@@ -700,68 +715,82 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
     }, []);
 
     return (
-        <div className="min-h-screen bg-gray-900 text-gray-200 p-4 sm:p-6 lg:p-8">
-            <div className="max-w-7xl mx-auto space-y-8">
-                <header className="text-center relative">
-                    <div className="flex flex-col items-center justify-center mb-2">
-                        <img src={import.meta.env.BASE_URL + '7mC.png'} alt="7 Mountains Creative Logo" className="h-16 w-16 object-contain mb-2" />
-                        <h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500 mb-2">7 Mountains Creative Analytics</h1>
-                    </div>
-                    <p className="text-gray-400 text-lg">Visualize your project data and timelines.</p>
-                    {isAuthenticated && (
-                        <button 
-                            onClick={() => {
-                                setIsAuthenticated(false);
-                                localStorage.removeItem('googleToken');
-                            }}
-                            className="absolute top-0 right-0 px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors"
-                        >
-                            Sign Out
-                        </button>
-                    )}
-                </header>
+        <div className="min-h-screen bg-gray-900 text-gray-200 p-3 sm:p-4 md:p-6 lg:p-8">
+            <div className="max-w-7xl mx-auto space-y-6 md:space-y-8">
+                <AnimatedSection delay={0}>
+                    <header className="text-center relative">
+                        <div className="flex flex-col items-center justify-center mb-2">
+                            <img 
+                                src={import.meta.env.BASE_URL + '7mC.png'} 
+                                alt="7 Mountains Creative Logo" 
+                                className="h-12 w-12 sm:h-16 sm:w-16 object-contain mb-2" 
+                            />
+                            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500 mb-2">
+                                7 Mountains Creative Analytics
+                            </h1>
+                        </div>
+                        <p className="text-gray-400 text-base sm:text-lg">Visualize your project data and timelines.</p>
+                        {isAuthenticated && (
+                            <button 
+                                onClick={() => {
+                                    setIsAuthenticated(false);
+                                    localStorage.removeItem('googleToken');
+                                }}
+                                className="absolute top-0 right-0 px-3 py-2 text-xs sm:text-sm bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors"
+                            >
+                                Sign Out
+                            </button>
+                        )}
+                    </header>
+                </AnimatedSection>
 
                 {!isAuthenticated ? (
-                    <div className="flex flex-col items-center justify-center mt-8">
-                        <div className="card p-8 w-full max-w-md">
-                            <h2 className="text-2xl font-bold text-center mb-6">Sign in to continue</h2>
-                            <div className="flex justify-center">
-                                <GoogleLogin onSuccess={handleLoginSuccess} onError={handleLoginError} />
+                    <AnimatedSection delay={200}>
+                        <div className="flex flex-col items-center justify-center mt-6 sm:mt-8">
+                            <div className="card p-6 sm:p-8 w-full max-w-md">
+                                <h2 className="text-xl sm:text-2xl font-bold text-center mb-4 sm:mb-6">Sign in to continue</h2>
+                                <div className="flex justify-center">
+                                    <GoogleLogin onSuccess={handleLoginSuccess} onError={handleLoginError} />
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </AnimatedSection>
                 ) : (
-                    <div className="space-y-8">
+                    <div className="space-y-6 md:space-y-8">
 
                 {/* Removed Asana token section. Only show fetch button and errors. */}
-                <div className="card">
-                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                        <button
-                            onClick={() => handleFetchProjects(projects.length > 0)}
-                            disabled={loading}
-                            className="btn-primary w-full sm:w-auto flex-grow flex items-center justify-center"
-                        >
-                            {loading && !projects.length ? 'Fetching...' : projects.length ? 'Refresh Projects' : 'Fetch Projects'}
-                        </button>
-                        <CacheStatusIndicator />
-                    </div>
-                    {error && <ErrorDisplay message={error} />}
-                    {loading && !analyzing && <div className="text-center mt-3 text-indigo-300 animate-pulse">Loading projects...</div>}
-                    {!loading && analyzing && projects.length > 0 && !projectDurations.length && <div className="text-center mt-3 text-indigo-300 animate-pulse">Auto-analyzing projects...</div>}
-                </div>
-                {/* Cross-Project Duration Comparison Section */}
-                <div className="card mt-8">
-                    <div className="space-y-6">
+                <AnimatedSection delay={100}>
+                    <div className="card">
                         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                            <h2 className="text-2xl font-bold mb-4 sm:mb-0">Project & Section Comparisons</h2>
                             <button
-                                onClick={analyzeAllProjects}
-                                disabled={analyzing}
-                                className="btn-primary w-full sm:w-auto flex items-center justify-center"
+                                onClick={() => handleFetchProjects(projects.length > 0)}
+                                disabled={loading}
+                                className="btn-primary w-full sm:w-auto flex-grow flex items-center justify-center"
                             >
-                                {analyzing ? 'Analyzing...' : projectDurations.length > 0 ? 'Re-Analyze Projects' : 'Analyze All Projects'}
+                                {loading && !projects.length ? 'Fetching...' : projects.length ? 'Refresh Projects' : 'Fetch Projects'}
                             </button>
+                            <CacheStatusIndicator />
                         </div>
+                        {error && <ErrorDisplay message={error} />}
+                        {loading && !analyzing && <div className="text-center mt-3 text-indigo-300 animate-pulse">Loading projects...</div>}
+                        {!loading && analyzing && projects.length > 0 && !projectDurations.length && <div className="text-center mt-3 text-indigo-300 animate-pulse">Auto-analyzing projects...</div>}
+                    </div>
+                </AnimatedSection>
+
+                {/* Cross-Project Duration Comparison Section */}
+                <AnimatedSection delay={200}>
+                    <div className="card mt-6 sm:mt-8">
+                        <div className="space-y-4 sm:space-y-6">
+                            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                                <h2 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-0">Project & Section Comparisons</h2>
+                                <button
+                                    onClick={analyzeAllProjects}
+                                    disabled={analyzing}
+                                    className="btn-primary w-full sm:w-auto flex items-center justify-center"
+                                >
+                                    {analyzing ? 'Analyzing...' : projectDurations.length > 0 ? 'Re-Analyze Projects' : 'Analyze All Projects'}
+                                </button>
+                            </div>
 
                         <div className="grid grid-cols-1 gap-y-6">
                             {/* Search and Filter Controls */}
@@ -844,7 +873,113 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
                                 <ComparisonTabs
                                   projectDurations={filteredDurations}
                                   highlightedProjects={highlightedProjects}
+                                  sortMethod={projectSort}
                                 />
+                                
+                                {/* Overall Project Statistics - Integrated in same section */}
+                                <div className="mt-8 pt-6 border-t border-gray-700">
+                                    <h3 className="text-xl font-bold mb-6 text-center">Overall Project Statistics</h3>
+                                    
+                                    {(() => {
+                                        // Calculate comprehensive statistics for all projects
+                                        const allDurations = filteredDurations.map(p => p.duration);
+                                        const stats = calculateStatistics(allDurations);
+                                        const statsInWeeks = {
+                                            mean: daysToWeeks(stats.mean),
+                                            median: daysToWeeks(stats.median),
+                                            range: daysToWeeks(stats.range),
+                                            skewness: stats.skewness, // Skewness is dimensionless
+                                            standardDeviation: daysToWeeks(stats.standardDeviation),
+                                            min: daysToWeeks(stats.min || 0),
+                                            max: daysToWeeks(stats.max || 0),
+                                            count: stats.count
+                                        };
+                                        
+                                        return (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                                                <div className="bg-gray-800/60 p-5 rounded-xl border border-gray-700 text-center">
+                                                    <p className="text-sm font-medium text-gray-400 mb-2">Mean Duration</p>
+                                                    <p className="text-2xl font-bold text-indigo-400">
+                                                        {formatNumber(statsInWeeks.mean)} weeks
+                                                    </p>
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        ({formatNumber(stats.mean)} days)
+                                                    </p>
+                                                </div>
+                                                
+                                                <div className="bg-gray-800/60 p-5 rounded-xl border border-gray-700 text-center">
+                                                    <p className="text-sm font-medium text-gray-400 mb-2">Median Duration</p>
+                                                    <p className="text-2xl font-bold text-green-400">
+                                                        {formatNumber(statsInWeeks.median)} weeks
+                                                    </p>
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        ({formatNumber(stats.median)} days)
+                                                    </p>
+                                                </div>
+                                                
+                                                <div className="bg-gray-800/60 p-5 rounded-xl border border-gray-700 text-center">
+                                                    <p className="text-sm font-medium text-gray-400 mb-2">Range Duration</p>
+                                                    <p className="text-2xl font-bold text-purple-400">
+                                                        {formatNumber(statsInWeeks.range)} weeks
+                                                    </p>
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        ({formatNumber(stats.range)} days)
+                                                    </p>
+                                                </div>
+                                                
+                                                <div className="bg-gray-800/60 p-5 rounded-xl border border-gray-700 text-center">
+                                                    <p className="text-sm font-medium text-gray-400 mb-2">Skewness</p>
+                                                    <p className="text-2xl font-bold text-amber-400">
+                                                        {formatNumber(statsInWeeks.skewness, 2)}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        {stats.skewness > 0 ? 'Right-skewed' : stats.skewness < 0 ? 'Left-skewed' : 'Symmetric'}
+                                                    </p>
+                                                </div>
+                                                
+                                                <div className="bg-gray-800/60 p-5 rounded-xl border border-gray-700 text-center">
+                                                    <p className="text-sm font-medium text-gray-400 mb-2">Standard Deviation</p>
+                                                    <p className="text-2xl font-bold text-orange-400">
+                                                        {formatNumber(statsInWeeks.standardDeviation)} weeks
+                                                    </p>
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        ({formatNumber(stats.standardDeviation)} days)
+                                                    </p>
+                                                </div>
+                                                
+                                                <div className="bg-gray-800/60 p-5 rounded-xl border border-gray-700 text-center">
+                                                    <p className="text-sm font-medium text-gray-400 mb-2">Shortest Project</p>
+                                                    <p className="text-2xl font-bold text-cyan-400">
+                                                        {statsInWeeks.count > 0 ? `${statsInWeeks.min} weeks` : 'N/A'}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        {stats.count > 0 ? `(${formatNumber(stats.min || 0)} days)` : ''}
+                                                    </p>
+                                                </div>
+                                                
+                                                <div className="bg-gray-800/60 p-5 rounded-xl border border-gray-700 text-center">
+                                                    <p className="text-sm font-medium text-gray-400 mb-2">Longest Project</p>
+                                                    <p className="text-2xl font-bold text-rose-400">
+                                                        {statsInWeeks.count > 0 ? `${statsInWeeks.max} weeks` : 'N/A'}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        {stats.count > 0 ? `(${formatNumber(stats.max || 0)} days)` : ''}
+                                                    </p>
+                                                </div>
+                                                
+                                                <div className="bg-gray-800/60 p-5 rounded-xl border border-gray-700 text-center">
+                                                    <p className="text-sm font-medium text-gray-400 mb-2">Sample Size</p>
+                                                    <p className="text-2xl font-bold text-gray-200">
+                                                        {statsInWeeks.count} projects
+                                                    </p>
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        analyzed in this dataset
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
                             </div>
                         ) : (
                             <p className="text-center text-gray-400 mt-8">No projects found matching your criteria.</p>
@@ -852,24 +987,27 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
                     </div>
                     {/* Project dropdown in its own card section below */}
                 </div>
+                </AnimatedSection>
                 {projects.length > 0 && (
-                    <div className="card mt-8">
-                        <label htmlFor="project-select" className="block text-sm font-medium text-gray-300 mb-2">Select a Project</label>
-                        <div className="relative">
-                            <select
-                                id="project-select"
-                                value={selectedProjectGid}
-                                onChange={(e) => setSelectedProjectGid(e.target.value)}
-                                className="select-field bg-gray-800 text-white text-lg border border-indigo-500 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                style={{ minWidth: '220px', fontWeight: 600, letterSpacing: '0.02em' }}
-                            >
-                                {projects.map((p: Task) => <option key={p.gid} value={p.gid} className="bg-gray-900 text-white">{p.name}</option>)}
-                            </select>
-                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-                                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                    <AnimatedSection delay={300}>
+                        <div className="card mt-6 sm:mt-8">
+                            <label htmlFor="project-select" className="block text-sm font-medium text-gray-300 mb-2">Select a Project</label>
+                            <div className="relative">
+                                <select
+                                    id="project-select"
+                                    value={selectedProjectGid}
+                                    onChange={(e) => setSelectedProjectGid(e.target.value)}
+                                    className="select-field bg-gray-800 text-white text-base sm:text-lg border border-indigo-500 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full"
+                                    style={{ minWidth: '220px', fontWeight: 600, letterSpacing: '0.02em' }}
+                                >
+                                    {projects.map((p: Task) => <option key={p.gid} value={p.gid} className="bg-gray-900 text-white">{p.name}</option>)}
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                                    <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </AnimatedSection>
 
                 )}
 
@@ -886,7 +1024,11 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
                         </div>
                     </div>
                 )}
-                {!loading && !analyzing && projectData && <DashboardView projectData={projectData} />}
+                {!loading && !analyzing && projectData && (
+                    <AnimatedSection delay={400}>
+                        <DashboardView projectData={projectData} />
+                    </AnimatedSection>
+                )}
                     </div>
                 )}
             </div>

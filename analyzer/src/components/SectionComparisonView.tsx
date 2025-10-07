@@ -1,6 +1,12 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
 import type { Task, ProjectDuration } from '../types';
 import { getSectionCategoryColor } from '../config/sectionPhases';
+import { 
+  daysToWeeks, 
+  formatDurationInWeeks, 
+  calculateStatistics, 
+  formatNumber 
+} from '../utils/statistics';
 
 interface SectionComparisonProps {
   projects: (ProjectDuration & { gid?: string })[];
@@ -26,6 +32,17 @@ const REQUIRED_SECTIONS = [
   'Development Phase',
   'Launch'
 ];
+
+// Add debugging to log color mapping issues
+const debugGetSectionCategoryColor = (category: string, isInProgress?: boolean): string => {
+    console.log(`DEBUG: Getting color for category: "${category}", isInProgress: ${isInProgress}`);
+    const color = getSectionCategoryColor(category, isInProgress);
+    console.log(`DEBUG: Color returned: ${color}`);
+    if (color === '#6b7280') {
+        console.warn(`DEBUG: Default gray color applied for category: "${category}"`);
+    }
+    return color;
+};
 
 const SectionComparisonView: React.FC<SectionComparisonProps> = ({ 
   projects,
@@ -431,12 +448,12 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
             const today = new Date(); // Today
             const durationMs = today.getTime() - firstTaskDate.getTime();
             durationDays = Math.max(0, Math.round(durationMs / (1000 * 60 * 60 * 24)));
-            console.log(`Section "${section}" is IN PROGRESS - duration so far:`, durationDays, 'days');
+            console.log(`Section "${section}" is IN PROGRESS - duration so far:`, durationDays, 'days (', daysToWeeks(durationDays), 'weeks)');
           } else {
             // Normal calculation for completed sections
             const durationMs = actualLastTaskDate.getTime() - firstTaskDate.getTime();
             durationDays = Math.max(0, Math.round(durationMs / (1000 * 60 * 60 * 24)));
-            console.log(`Section "${section}" duration:`, durationDays, 'days');
+            console.log(`Section "${section}" duration:`, durationDays, 'days (', daysToWeeks(durationDays), 'weeks)');
           }
           
           console.log(`  First task date: ${firstTaskDate.toISOString()}`);
@@ -699,7 +716,7 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
               );
               
               const sectionData = project.sections[selectedSection];
-              const barColor = getSectionCategoryColor(selectedSection, sectionData?.isInProgress);
+              const barColor = debugGetSectionCategoryColor(selectedSection, sectionData?.isInProgress);
               
               return (
                 <div 
@@ -716,8 +733,8 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
                     </div>
                     <div className="ml-2 text-xs text-gray-400">
                       {sectionData?.isInProgress 
-                        ? `${selectedSection}: In progress - ${sectionData?.duration || 0} days so far (${sectionData?.taskCount || 0} tasks)`
-                        : `${selectedSection}: ${sectionData?.duration || 0} days (${sectionData?.taskCount || 0} tasks)`
+                        ? `${selectedSection}: In progress - ${formatDurationInWeeks(sectionData?.duration || 0)} so far (${sectionData?.taskCount || 0} tasks)`
+                        : `${selectedSection}: ${formatDurationInWeeks(sectionData?.duration || 0)} (${sectionData?.taskCount || 0} tasks)`
                       }
                     </div>
                   </div>
@@ -738,37 +755,110 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
           
           {/* Section statistics */}
           <div className="mt-6 pt-6 border-t border-gray-700">
-            <h3 className="text-lg font-semibold mb-2">Statistics for {selectedSection}</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-gray-800 p-4 rounded-md">
-                <p className="text-sm text-gray-400">Average Duration</p>
-                <p className="text-2xl font-bold">
-                  {Math.round(filteredProjects.reduce((sum, p) => 
-                    sum + (p.sections[selectedSection]?.duration || 0), 0
-                  ) / filteredProjects.length)} days
-                </p>
-              </div>
+            <h3 className="text-lg font-semibold mb-4">Statistics for {selectedSection}</h3>
+            
+            {(() => {
+              // Calculate comprehensive statistics
+              const durations = filteredProjects
+                .map(p => p.sections[selectedSection]?.duration || 0)
+                .filter(d => d > 0);
               
-              <div className="bg-gray-800 p-4 rounded-md">
-                <p className="text-sm text-gray-400">Shortest</p>
-                <p className="text-2xl font-bold">
-                  {filteredProjects.length > 0 ? 
-                    `${filteredProjects[0]?.sections?.[selectedSection]?.duration || 0} days` : 
-                    'N/A'}
-                </p>
-                <p className="text-xs truncate">{filteredProjects[0]?.projectName || ''}</p>
-              </div>
+              const stats = calculateStatistics(durations);
+              const statsInWeeks = {
+                mean: daysToWeeks(stats.mean),
+                median: daysToWeeks(stats.median),
+                range: daysToWeeks(stats.range),
+                skewness: stats.skewness, // Skewness is dimensionless, no need to convert
+                standardDeviation: daysToWeeks(stats.standardDeviation),
+                min: daysToWeeks(stats.min || 0),
+                max: daysToWeeks(stats.max || 0),
+                count: stats.count
+              };
               
-              <div className="bg-gray-800 p-4 rounded-md">
-                <p className="text-sm text-gray-400">Longest</p>
-                <p className="text-2xl font-bold">
-                  {filteredProjects.length > 0 ? 
-                    `${filteredProjects[filteredProjects.length-1]?.sections?.[selectedSection]?.duration || 0} days` : 
-                    'N/A'}
-                </p>
-                <p className="text-xs truncate">{filteredProjects[filteredProjects.length-1]?.projectName || ''}</p>
-              </div>
-            </div>
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-gray-800 p-4 rounded-md">
+                    <p className="text-sm text-gray-400">Mean Duration</p>
+                    <p className="text-2xl font-bold">
+                      {formatNumber(statsInWeeks.mean)} weeks
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      ({formatNumber(stats.mean)} days)
+                    </p>
+                  </div>
+                  
+                  <div className="bg-gray-800 p-4 rounded-md">
+                    <p className="text-sm text-gray-400">Median Duration</p>
+                    <p className="text-2xl font-bold">
+                      {formatNumber(statsInWeeks.median)} weeks
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      ({formatNumber(stats.median)} days)
+                    </p>
+                  </div>
+                  
+                  <div className="bg-gray-800 p-4 rounded-md">
+                    <p className="text-sm text-gray-400">Range Duration</p>
+                    <p className="text-2xl font-bold">
+                      {formatNumber(statsInWeeks.range)} weeks
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      ({formatNumber(stats.range)} days)
+                    </p>
+                  </div>
+                  
+                  <div className="bg-gray-800 p-4 rounded-md">
+                    <p className="text-sm text-gray-400">Skewness</p>
+                    <p className="text-2xl font-bold">
+                      {formatNumber(statsInWeeks.skewness, 2)}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {stats.skewness > 0 ? 'Right-skewed' : stats.skewness < 0 ? 'Left-skewed' : 'Symmetric'}
+                    </p>
+                  </div>
+                  
+                  <div className="bg-gray-800 p-4 rounded-md">
+                    <p className="text-sm text-gray-400">Standard Deviation</p>
+                    <p className="text-2xl font-bold">
+                      {formatNumber(statsInWeeks.standardDeviation)} weeks
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      ({formatNumber(stats.standardDeviation)} days)
+                    </p>
+                  </div>
+                  
+                  <div className="bg-gray-800 p-4 rounded-md">
+                    <p className="text-sm text-gray-400">Shortest Duration</p>
+                    <p className="text-2xl font-bold">
+                      {statsInWeeks.count > 0 ? `${statsInWeeks.min} weeks` : 'N/A'}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {stats.count > 0 ? `(${formatNumber(stats.min || 0)} days)` : ''}
+                    </p>
+                  </div>
+                  
+                  <div className="bg-gray-800 p-4 rounded-md">
+                    <p className="text-sm text-gray-400">Longest Duration</p>
+                    <p className="text-2xl font-bold">
+                      {statsInWeeks.count > 0 ? `${statsInWeeks.max} weeks` : 'N/A'}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {stats.count > 0 ? `(${formatNumber(stats.max || 0)} days)` : ''}
+                    </p>
+                  </div>
+                  
+                  <div className="bg-gray-800 p-4 rounded-md">
+                    <p className="text-sm text-gray-400">Sample Size</p>
+                    <p className="text-2xl font-bold">
+                      {statsInWeeks.count} projects
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      with {selectedSection} data
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </>
       )}
