@@ -306,7 +306,7 @@ export default function App() {
         setAnalyzing(true);
         setAnalysisError('');
         try {
-            // Import the project filter utility and cache utilities
+            // Import the project filter utility and server cache utilities
             const { filterSkippedProjects } = await import('./utils/projectFilter');
             const { 
                 isCacheValid, 
@@ -317,14 +317,14 @@ export default function App() {
                 getCachedAnalyzedData,
                 cacheAnalyzedData,
                 clearExpiredCache
-            } = await import('./utils/asanaCache');
+            } = await import('./utils/serverCache');
             
             // Clear expired cache first
-            clearExpiredCache();
+            await clearExpiredCache();
             
             // First check if we have valid cached analysis data
-            const cachedAnalyzedData = getCachedAnalyzedData();
-            if (isCacheValid() && cachedAnalyzedData && cachedAnalyzedData.length > 0) {
+            const cachedAnalyzedData = await getCachedAnalyzedData();
+            if (await isCacheValid() && cachedAnalyzedData && cachedAnalyzedData.length > 0) {
                 console.log('Using cached analyzed data');
                 // Filter out 0-day projects from cached data and sort based on current sort preference
                 const filtered = cachedAnalyzedData.filter(project => project.duration > 0);
@@ -337,9 +337,9 @@ export default function App() {
             
             // Check if we have valid cached projects
             let projectsList = [];
-            if (isCacheValid() && getCachedProjects().length > 0) {
+            if (await isCacheValid() && (await getCachedProjects()).length > 0) {
                 console.log('Using cached project data');
-                projectsList = filterSkippedProjects(getCachedProjects());
+                projectsList = filterSkippedProjects(await getCachedProjects());
             } else {
                 // Step 1: Fetch all workspaces to ensure we don't miss any projects
                 const workspacesResponse = await fetch(`${ASANA_API_BASE}/workspaces?opt_fields=name,gid`, {
@@ -366,7 +366,7 @@ export default function App() {
                 }
                 
                 // Cache the raw projects data
-                cacheProjects(allProjects);
+                await cacheProjects(allProjects);
                 
                 // Step 3: Apply skip list filtering
                 projectsList = filterSkippedProjects(allProjects);
@@ -378,7 +378,7 @@ export default function App() {
             for (const project of projectsList) {
                 try {
                     // First check the cache for this project's tasks
-                    let projectTasks = getCachedProjectTasks(project.gid);
+                    let projectTasks = await getCachedProjectTasks(project.gid);
                     
                     if (!projectTasks) {
                         // Fetch tasks if not in cache
@@ -390,7 +390,7 @@ export default function App() {
                             const tasksResult = await tasksResponse.json();
                             projectTasks = tasksResult.data || [];
                             // Cache these tasks
-                            cacheProjectTasks(project.gid, projectTasks as Task[]);
+                            await cacheProjectTasks(project.gid, projectTasks as Task[]);
                         } else {
                             console.warn(`Could not fetch tasks for project ${project.name}: ${tasksResponse.statusText}`);
                             projectTasks = [];
@@ -468,7 +468,7 @@ export default function App() {
             sortProjectDurations(sorted, projectSort);
             
             // Cache the analyzed data
-            cacheAnalyzedData(durations);
+            await cacheAnalyzedData(durations);
             
             setProjectDurations(sorted);
         } catch (e) {
@@ -533,7 +533,7 @@ export default function App() {
         setProjects([]);
         setProjectData(null);
         try {
-            // Import the project filter utility and cache utilities
+            // Import the project filter utility and server cache utilities
             const { filterSkippedProjects } = await import('./utils/projectFilter');
             const { 
                 isCacheValid, 
@@ -541,15 +541,15 @@ export default function App() {
                 cacheProjects,
                 clearCache,
                 clearExpiredCache
-            } = await import('./utils/asanaCache');
+            } = await import('./utils/serverCache');
             
             // Clear expired cache first
-            clearExpiredCache();
+            await clearExpiredCache();
             
             // Check cache first if not forcing refresh
-            if (!forceRefresh && isCacheValid() && getCachedProjects().length > 0) {
+            if (!forceRefresh && await isCacheValid() && (await getCachedProjects()).length > 0) {
                 console.log('Using cached projects');
-                const cachedProjects = getCachedProjects();
+                const cachedProjects = await getCachedProjects();
                 const filteredProjects = filterSkippedProjects(cachedProjects);
                 
                 // Sort projects alphabetically by name
@@ -569,7 +569,7 @@ export default function App() {
             
             // Force refresh requested or cache invalid, clear the cache
             if (forceRefresh) {
-                clearCache();
+                await clearCache();
             }
             
             // Fetch all workspaces first
@@ -597,7 +597,7 @@ export default function App() {
             }
             
             // Cache the fetched projects
-            cacheProjects(allProjects);
+            await cacheProjects(allProjects);
             
             // Filter out projects in the skip list
             const filteredProjects = filterSkippedProjects(allProjects);

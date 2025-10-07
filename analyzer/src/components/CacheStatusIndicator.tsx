@@ -25,8 +25,8 @@ const CacheStatusIndicator: React.FC = () => {
   useEffect(() => {
     const fetchCacheStatus = async () => {
       try {
-        const { getCacheStatus } = await import('../utils/asanaCache');
-        setCacheStatus(getCacheStatus());
+        const { getCacheStatus } = await import('../utils/serverCache');
+        setCacheStatus(await getCacheStatus());
       } catch (err) {
         console.error('Error fetching cache status:', err);
       }

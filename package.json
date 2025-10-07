@@ -7,8 +7,12 @@
     "analyzer"
   ],
   "scripts": {
-    "start": "cd analyzer && npm run dev",
+    "start": "cd analyzer/server && npm start",
+    "dev": "cd analyzer && npm run dev",
     "build": "cd analyzer && npm run build",
-    "lint": "cd analyzer && npm run lint"
+    "lint": "cd analyzer && npm run lint",
+    "install:all": "npm install && cd analyzer && npm install && npm run install:server",
+    "server:start": "cd analyzer/server && npm start",
+    "server:dev": "cd analyzer/server && npm run dev"
   }
 }
