@@ -6,7 +6,8 @@ const cron = require('node-cron');
 const axios = require('axios');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+// Use environment PORT or default to a higher range to avoid conflicts
+const PORT = process.env.PORT || process.env.NODE_PORT || 8080;
 
 // Enable CORS for all routes
 app.use(cors());
@@ -276,8 +277,36 @@ cron.schedule('0 0 */2 * *', async () => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Cache directory: ${CACHE_DIR}`);
-  console.log('Automatic cache refresh scheduled for every 2 days at midnight');
-});
+// Start server with safe port fallback
+function startServer(port) {
+  const server = app.listen(port, () => {
+    console.log(`Asana Analytics Server running on port ${port}`);
+    console.log(`Access your application at: http://localhost:${port}`);
+    console.log(`Cache directory: ${CACHE_DIR}`);
+    console.log('Automatic cache refresh scheduled for every 2 days at midnight');
+  }).on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.log(`Port ${port} is already in use.`);
+      
+      // Try next available port in safe range (8080-8090)
+      if (port < 8090) {
+        const nextPort = port + 1;
+        console.log(`Trying port ${nextPort}...`);
+        startServer(nextPort);
+      } else {
+        console.error('No available ports in range 8080-8090.');
+        console.error('Please set a custom port using: PORT=YOUR_PORT npm start');
+        console.error('Example: PORT=9000 npm start');
+        process.exit(1);
+      }
+    } else {
+      console.error(`Server error: ${err.message}`);
+      process.exit(1);
+    }
+  });
+  
+  return server;
+}
+
+// Start the server
+startServer(PORT);
