@@ -13,7 +13,7 @@ echo ""
 
 # Kill existing processes
 echo "1️⃣ Stopping existing processes..."
-pkill -f 'node.*app.js' 2>/dev/null && echo "   Killed app.js processes" ||a echo "   No app.js processes"
+pkill -f 'node.*app.js' 2>/dev/null && echo "   Killed app.js processes" || echo "   No app.js processes"
 pkill -f 'node.*startup.js' 2>/dev/null && echo "   Killed startup.js processes" || echo "   No startup.js processes"
 sleep 2
 echo ""

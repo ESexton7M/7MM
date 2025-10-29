@@ -1,18 +1,15 @@
-# Plesk Node.js Application Configuration
-# Note: Node.js is managed through Plesk Panel, not Passenger
+# Plesk Node.js Application
+# The Node.js app (startup.js/app.js) handles all routing
+# No Apache rewrite rules needed
 
-# Enable RewriteEngine
-RewriteEngine on
+# Optional: Add security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
 
-# Proxy API requests to Node.js server (running on port 8080 by default)
-# Uncomment these lines if you need to proxy API requests
-# RewriteCond %{REQUEST_URI} ^/api/
-# RewriteRule ^api/(.*)$ http://localhost:8080/api/$1 [P,L]
-
-# Serve static files directly if they exist
-RewriteCond %{REQUEST_FILENAME} -f [OR]
-RewriteCond %{REQUEST_FILENAME} -d
-RewriteRule ^ - [L]
-
-# Handle client-side routing - serve index.html for all other requests
-RewriteRule ^ /analyzer/dist/index.html [L]
+# Optional: Enable compression
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+</IfModule>
