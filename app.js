@@ -88,16 +88,38 @@ function isCacheValid(timestamp) {
 // Health check endpoint
 app.get('/api/health', async (req, res) => {
   try {
+    // Check if cache directory exists and is writable
+    let cacheDirExists = false;
+    let cacheDirWritable = false;
+    let cacheError = null;
+    
+    try {
+      await fs.access(CACHE_DIR);
+      cacheDirExists = true;
+      
+      // Try to write a test file
+      const testFile = path.join(CACHE_DIR, 'test.txt');
+      await fs.writeFile(testFile, 'test');
+      await fs.unlink(testFile);
+      cacheDirWritable = true;
+    } catch (err) {
+      cacheError = err.message;
+    }
+    
     res.json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
       server: {
         port: PORT,
-        environment: process.env.NODE_ENV || 'production'
+        environment: process.env.NODE_ENV || 'production',
+        cwd: process.cwd()
       },
       cache: {
         directory: CACHE_DIR,
-        isValid: true
+        isValid: true,
+        exists: cacheDirExists,
+        writable: cacheDirWritable,
+        error: cacheError
       }
     });
   } catch (error) {
@@ -105,7 +127,10 @@ app.get('/api/health', async (req, res) => {
     res.status(500).json({ 
       status: 'unhealthy',
       error: error.message,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      cache: {
+        directory: CACHE_DIR
+      }
     });
   }
 });

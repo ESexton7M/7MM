@@ -26,42 +26,38 @@ echo ""
 # Step 2: Install dependencies
 echo "2️⃣ Installing dependencies..."
 echo "   Installing root dependencies..."
-npm install --production
-if [ $? -ne 0 ]; then
+npm install --production || {
     echo "   ❌ Root npm install failed"
     exit 1
-fi
+}
 
 echo "   Installing analyzer dependencies..."
-cd analyzer
-npm install
-if [ $? -ne 0 ]; then
+cd analyzer || exit 1
+npm install || {
     echo "   ❌ Analyzer npm install failed"
     exit 1
-fi
+}
 
 echo "   Installing server dependencies..."
-cd server
-npm install --production
-if [ $? -ne 0 ]; then
+cd server || exit 1
+npm install --production || {
     echo "   ❌ Server npm install failed"
     exit 1
-fi
+}
 
-cd ../..
+cd ../.. || exit 1
 echo "   ✅ All dependencies installed"
 echo ""
 
 # Step 3: Build the application
 echo "3️⃣ Building application..."
-cd analyzer
-npm run build
-if [ $? -ne 0 ]; then
+cd analyzer || exit 1
+npm run build || {
     echo "   ❌ Build failed"
     exit 1
-fi
+}
 
-cd ..
+cd .. || exit 1
 echo "   ✅ Build completed successfully"
 echo "   Built files in: analyzer/dist/"
 echo ""
