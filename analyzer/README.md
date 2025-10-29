@@ -32,24 +32,46 @@ A comprehensive React TypeScript application for visualizing and analyzing Asana
 2. Install dependencies:
    ```bash
    npm install
+   npm run install:server
    ```
 
 3. Create a `.env` file in the root directory with your Asana token:
    ```
-   VITE_ASANA_TOKEN=your_personal_access_token
+   VITE_ASANA_ACCESS_TOKEN=your_personal_access_token
+   VITE_GOOGLE_CLIENT_ID=your_google_client_id
    ```
    
    > **Note**: You can generate an Asana Personal Access Token in your [Asana Developer Console](https://app.asana.com/0/developer-console).
 
-4. Start the development server:
+4. Start both frontend and backend servers:
    ```bash
-   npm run dev
+   npm start
    ```
+   
+   This will start:
+   - Backend cache server on port 8080
+   - Frontend dev server on port 3000
 
 5. Build for production:
    ```bash
    npm run build
    ```
+
+## Deployment
+
+For Plesk or other hosting platforms, see [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed instructions on running both servers simultaneously.
+
+## Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm start` | Run both frontend and backend servers together (recommended) |
+| `npm run dev` | Run only the frontend Vite dev server |
+| `npm run server` | Run only the backend cache server |
+| `npm run build` | Build the frontend for production |
+| `npm run start:prod` | Run backend + production preview server |
+| `npm run install:server` | Install backend server dependencies |
+| `npm run lint` | Run ESLint code linting |
 
 ## Project Structure
 
