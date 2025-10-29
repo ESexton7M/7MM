@@ -12,8 +12,8 @@ const PORT = process.env.PORT || 8080;
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-// Cache file paths
-const CACHE_DIR = path.join(__dirname, 'server', 'cache');
+// Cache file paths - use analyzer/server/cache for consistency
+const CACHE_DIR = path.join(__dirname, 'analyzer', 'server', 'cache');
 const PROJECTS_CACHE_FILE = path.join(CACHE_DIR, 'projects.json');
 const ANALYZED_CACHE_FILE = path.join(CACHE_DIR, 'analyzed.json');
 const CACHE_METADATA_FILE = path.join(CACHE_DIR, 'metadata.json');
@@ -26,16 +26,28 @@ const CACHE_EXPIRATION = 2 * 24 * 60 * 60 * 1000;
 async function ensureCacheDir() {
   try {
     await fs.access(CACHE_DIR);
+    console.log('Cache directory exists:', CACHE_DIR);
   } catch (error) {
-    await fs.mkdir(CACHE_DIR, { recursive: true });
-    console.log('Created cache directory');
+    try {
+      await fs.mkdir(CACHE_DIR, { recursive: true });
+      console.log('Created cache directory:', CACHE_DIR);
+    } catch (mkdirError) {
+      console.error('Failed to create cache directory:', mkdirError);
+      throw mkdirError;
+    }
   }
   
   try {
     await fs.access(PROJECT_TASKS_CACHE_DIR);
+    console.log('Project tasks cache directory exists');
   } catch (error) {
-    await fs.mkdir(PROJECT_TASKS_CACHE_DIR, { recursive: true });
-    console.log('Created project tasks cache directory');
+    try {
+      await fs.mkdir(PROJECT_TASKS_CACHE_DIR, { recursive: true });
+      console.log('Created project tasks cache directory');
+    } catch (mkdirError) {
+      console.error('Failed to create project tasks cache directory:', mkdirError);
+      throw mkdirError;
+    }
   }
 }
 
@@ -101,6 +113,9 @@ app.get('/api/health', async (req, res) => {
 // Get cache status
 app.get('/api/cache/status', async (req, res) => {
   try {
+    // Ensure cache directory exists before checking status
+    await ensureCacheDir();
+    
     const metadata = await getCacheMetadata();
     const now = Date.now();
     
@@ -138,7 +153,12 @@ app.get('/api/cache/status', async (req, res) => {
     });
   } catch (error) {
     console.error('Error getting cache status:', error);
-    res.status(500).json({ error: 'Failed to get cache status' });
+    console.error('Cache directory:', CACHE_DIR);
+    res.status(500).json({ 
+      error: 'Failed to get cache status',
+      message: error.message,
+      cacheDir: CACHE_DIR
+    });
   }
 });
 
@@ -205,6 +225,9 @@ app.get('/api/cache/project/:projectId/tasks', async (req, res) => {
 // Save projects to cache
 app.post('/api/cache/projects', async (req, res) => {
   try {
+    // Ensure cache directory exists before writing
+    await ensureCacheDir();
+    
     const projects = req.body;
     
     await fs.writeFile(PROJECTS_CACHE_FILE, JSON.stringify(projects, null, 2));
@@ -218,7 +241,12 @@ app.post('/api/cache/projects', async (req, res) => {
     res.json({ success: true, timestamp: metadata.projectsTimestamp });
   } catch (error) {
     console.error('Error saving projects cache:', error);
-    res.status(500).json({ error: 'Failed to save cache' });
+    console.error('Cache directory:', CACHE_DIR);
+    res.status(500).json({ 
+      error: 'Failed to save cache',
+      message: error.message,
+      cacheDir: CACHE_DIR
+    });
   }
 });
 
@@ -244,6 +272,9 @@ app.post('/api/cache/analyzed', async (req, res) => {
 // Save project tasks to cache
 app.post('/api/cache/project/:projectId/tasks', async (req, res) => {
   try {
+    // Ensure cache directory exists before writing
+    await ensureCacheDir();
+    
     const { projectId } = req.params;
     const tasks = req.body;
     const tasksCacheFile = path.join(PROJECT_TASKS_CACHE_DIR, `${projectId}.json`);
@@ -254,7 +285,12 @@ app.post('/api/cache/project/:projectId/tasks', async (req, res) => {
     res.json({ success: true, timestamp: Date.now() });
   } catch (error) {
     console.error('Error saving project tasks cache:', error);
-    res.status(500).json({ error: 'Failed to save project tasks cache' });
+    console.error('Cache directory:', PROJECT_TASKS_CACHE_DIR);
+    res.status(500).json({ 
+      error: 'Failed to save project tasks cache',
+      message: error.message,
+      cacheDir: PROJECT_TASKS_CACHE_DIR
+    });
   }
 });
 

@@ -1,21 +1,18 @@
-# Passenger configuration for Plesk
-PassengerEnabled on
-PassengerStartupFile startup.js
-PassengerAppType node
-PassengerMinInstances 1
-PassengerMaxRequestQueueSize 100
+# Plesk Node.js Application Configuration
+# Note: Node.js is managed through Plesk Panel, not Passenger
 
-# Handle API routes
+# Enable RewriteEngine
 RewriteEngine on
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^api/ - [L]
 
-# Handle static files
-RewriteCond %{REQUEST_FILENAME} -f
-RewriteRule . - [L]
+# Proxy API requests to Node.js server (running on port 8080 by default)
+# Uncomment these lines if you need to proxy API requests
+# RewriteCond %{REQUEST_URI} ^/api/
+# RewriteRule ^api/(.*)$ http://localhost:8080/api/$1 [P,L]
 
-# Handle client-side routing
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule . /analyzer/dist/index.html [L]
+# Serve static files directly if they exist
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Handle client-side routing - serve index.html for all other requests
+RewriteRule ^ /analyzer/dist/index.html [L]
