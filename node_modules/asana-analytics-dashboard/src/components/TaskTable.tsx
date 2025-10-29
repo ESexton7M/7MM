@@ -18,13 +18,17 @@ const TaskTable: FC<TaskTableProps> = ({ tasks }) => {
     return date.toISOString().slice(0, 10); // YYYY-MM-DD
   };
 
-  // Helper to calculate days between created and completed
-  const getDaysBetween = (created: string, completed: string | null | undefined): string => {
-    if (!created || !completed) return '';
-    const createdDate = new Date(created);
+  // Helper to calculate days between start and completed
+  const getDaysBetween = (task: Task): string => {
+    // Priority: assigned_at > start_at > start_on > created_at
+    const startDate = task.assigned_at || task.start_at || task.start_on || task.created_at;
+    const completed = task.completed_at;
+    
+    if (!startDate || !completed) return '';
+    const start = new Date(startDate);
     const completedDate = new Date(completed);
-    if (isNaN(createdDate.getTime()) || isNaN(completedDate.getTime())) return '';
-    const diff = Math.round((completedDate.getTime() - createdDate.getTime()) / (1000 * 3600 * 24));
+    if (isNaN(start.getTime()) || isNaN(completedDate.getTime())) return '';
+    const diff = Math.round((completedDate.getTime() - start.getTime()) / (1000 * 3600 * 24));
     if (diff < 0) return '';
     
     // Show weeks for longer durations
@@ -33,6 +37,23 @@ const TaskTable: FC<TaskTableProps> = ({ tasks }) => {
       return `${weeks} weeks (${diff} days)`;
     }
     return `${diff} days`;
+  };
+
+  // Helper to get the start time (when first assigned or created)
+  const getStartTime = (task: Task): string => {
+    // Priority: assigned_at (from stories) > start_at > start_on > created_at
+    const startDate = task.assigned_at || task.start_at || task.start_on || task.created_at;
+    
+    // Debug logging
+    if (task.assigned_at) {
+      console.log(`Task "${task.name}" using assigned_at: ${task.assigned_at}`);
+    } else if (task.start_at) {
+      console.log(`Task "${task.name}" using start_at: ${task.start_at}`);
+    } else {
+      console.log(`Task "${task.name}" using created_at (fallback): ${task.created_at}`);
+    }
+    
+    return formatDate(startDate);
   };
 
   return (
@@ -52,7 +73,7 @@ const TaskTable: FC<TaskTableProps> = ({ tasks }) => {
           <thead className="text-xs text-gray-300 uppercase bg-gray-900 border-b border-gray-700">
             <tr>
               <th scope="col" className="px-2 xs:px-4 sm:px-6 py-2 sm:py-3 tracking-wider">Task Name</th>
-              <th scope="col" className="px-2 xs:px-4 sm:px-6 py-2 sm:py-3 tracking-wider">Created On</th>
+              <th scope="col" className="px-2 xs:px-4 sm:px-6 py-2 sm:py-3 tracking-wider">Assigned Date</th>
               <th scope="col" className="px-2 xs:px-4 sm:px-6 py-2 sm:py-3 tracking-wider">Due On</th>
               <th scope="col" className="px-2 xs:px-4 sm:px-6 py-2 sm:py-3 tracking-wider">Completed On</th>
               <th scope="col" className="px-2 xs:px-4 sm:px-6 py-2 sm:py-3 tracking-wider">Duration</th>
@@ -70,10 +91,10 @@ const TaskTable: FC<TaskTableProps> = ({ tasks }) => {
                 <th scope="row" className="px-2 xs:px-4 sm:px-6 py-2 sm:py-4 font-semibold text-gray-100 whitespace-nowrap">
                   {task.name}
                 </th>
-                <td className="px-2 xs:px-4 sm:px-6 py-2 sm:py-4">{formatDate(task.created_at)}</td>
+                <td className="px-2 xs:px-4 sm:px-6 py-2 sm:py-4">{getStartTime(task)}</td>
                 <td className="px-2 xs:px-4 sm:px-6 py-2 sm:py-4">{formatDate(task.due_on)}</td>
                 <td className="px-2 xs:px-4 sm:px-6 py-2 sm:py-4">{formatDate(task.completed_at)}</td>
-                <td className="px-2 xs:px-4 sm:px-6 py-2 sm:py-4">{getDaysBetween(task.created_at, task.completed_at)}</td>
+                <td className="px-2 xs:px-4 sm:px-6 py-2 sm:py-4">{getDaysBetween(task)}</td>
                 <td className="px-2 xs:px-4 sm:px-6 py-2 sm:py-4">
                   <span className={`px-2 py-1 text-xs font-semibold rounded-full shadow ${
                     task.completed

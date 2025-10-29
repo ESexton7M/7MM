@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 // Import components
 import LoadingSpinner from './components/LoadingSpinner';
@@ -63,6 +63,9 @@ export default function App() {
         end: ''    // Will be set to a default in useEffect
     });
     const [filteredDurations, setFilteredDurations] = useState<typeof projectDurations>([]);
+    
+    // Ref for scrolling to project select section
+    const projectSelectRef = useRef<HTMLDivElement>(null);
 
     // Helper: Generate quarter options for the last 5 years and next year
     const generateQuarterOptions = useCallback(() => {
@@ -837,7 +840,44 @@ export default function App() {
                 
                 if (cachedTasks && cachedTasks.length > 0) {
                     console.log(`Using cached tasks for project ${selectedProjectGid}`);
-                    processDataForDashboard(cachedTasks);
+                    
+                    // Fetch assignment dates from stories for cached tasks
+                    const tasksWithAssignments = await Promise.all(
+                        cachedTasks.map(async (task) => {
+                            try {
+                                const storiesResponse = await fetch(`${ASANA_API_BASE}/tasks/${task.gid}/stories?opt_fields=created_at,resource_type,resource_subtype,text`, {
+                                    headers: { 'Authorization': `Bearer ${token}` }
+                                });
+                                if (storiesResponse.ok) {
+                                    const storiesData = await storiesResponse.json();
+                                    console.log(`Stories for task ${task.name}:`, storiesData.data.slice(0, 5));
+                                    
+                                    // Find the first assignment story
+                                    const assignmentStory = storiesData.data.find((story: any) => {
+                                        if (!story.text) return false;
+                                        const text = story.text.toLowerCase();
+                                        return (
+                                            text.includes('assigned to') ||
+                                            text.includes('assigned this task') ||
+                                            (story.resource_subtype === 'assigned')
+                                        );
+                                    });
+                                    
+                                    if (assignmentStory) {
+                                        console.log(`Found assignment date for ${task.name}: ${assignmentStory.created_at}`);
+                                        return { ...task, assigned_at: assignmentStory.created_at };
+                                    } else {
+                                        console.log(`No assignment story found for ${task.name}`);
+                                    }
+                                }
+                            } catch (err) {
+                                console.warn(`Could not fetch stories for task ${task.gid}:`, err);
+                            }
+                            return task;
+                        })
+                    );
+                    
+                    processDataForDashboard(tasksWithAssignments);
                     setLoading(false);
                     return;
                 }
@@ -851,11 +891,45 @@ export default function App() {
                 const taskListResult = await taskListResponse.json();
                 
                 // 2. Fetch full details for each task concurrently
-                const taskDetailPromises = taskListResult.data.map((task: Task) =>
-                    fetch(`${ASANA_API_BASE}/tasks/${task.gid}?opt_fields=name,created_at,due_on,completed,completed_at`, {
+                const taskDetailPromises = taskListResult.data.map(async (task: Task) => {
+                    const taskResponse = await fetch(`${ASANA_API_BASE}/tasks/${task.gid}?opt_fields=name,created_at,due_on,completed,completed_at,start_at,start_on`, {
                         headers: { 'Authorization': `Bearer ${token}` }
-                    }).then(res => res.json())
-                );
+                    });
+                    const taskData = await taskResponse.json();
+                    
+                    // Fetch task stories to find first assignment date
+                    try {
+                        const storiesResponse = await fetch(`${ASANA_API_BASE}/tasks/${task.gid}/stories?opt_fields=created_at,resource_type,resource_subtype,text`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (storiesResponse.ok) {
+                            const storiesData = await storiesResponse.json();
+                            console.log(`Stories for task ${taskData.data.name}:`, storiesData.data.slice(0, 5));
+                            
+                            // Find the first assignment story - look for various patterns
+                            const assignmentStory = storiesData.data.find((story: any) => {
+                                if (!story.text) return false;
+                                const text = story.text.toLowerCase();
+                                return (
+                                    text.includes('assigned to') ||
+                                    text.includes('assigned this task') ||
+                                    (story.resource_subtype === 'assigned')
+                                );
+                            });
+                            
+                            if (assignmentStory) {
+                                taskData.data.assigned_at = assignmentStory.created_at;
+                                console.log(`Found assignment date for ${taskData.data.name}: ${assignmentStory.created_at}`);
+                            } else {
+                                console.log(`No assignment story found for ${taskData.data.name}`);
+                            }
+                        }
+                    } catch (err) {
+                        console.warn(`Could not fetch stories for task ${task.gid}:`, err);
+                    }
+                    
+                    return taskData;
+                });
                 const taskDetailResults = await Promise.all(taskDetailPromises);
                 const tasks = taskDetailResults.map((res: { data: Task }) => res.data);
                 
@@ -875,6 +949,29 @@ export default function App() {
         };
         fetchProjectTasks();
     }, [selectedProjectGid, token, processDataForDashboard, ASANA_API_BASE]);
+
+    // Handler for clicking a project in the chart - scrolls to project selector and selects it
+    const handleProjectClick = useCallback((projectName: string) => {
+        // Find the project by name
+        const project = projects.find(p => p.name === projectName);
+        if (project) {
+            // Set the selected project
+            setSelectedProjectGid(project.gid);
+            
+            // Scroll to the project select section at the top of the viewport
+            if (projectSelectRef.current) {
+                projectSelectRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Add a brief highlight effect
+                projectSelectRef.current.style.transition = 'box-shadow 0.3s';
+                projectSelectRef.current.style.boxShadow = '0 0 20px 4px rgba(129, 140, 248, 0.6)';
+                setTimeout(() => {
+                    if (projectSelectRef.current) {
+                        projectSelectRef.current.style.boxShadow = '';
+                    }
+                }, 1500);
+            }
+        }
+    }, [projects]);
 
 
 
@@ -1113,6 +1210,7 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
                                   projectDurations={filteredDurations}
                                   highlightedProjects={highlightedProjects}
                                   sortMethod={projectSort}
+                                  onProjectClick={handleProjectClick}
                                 />
                                 
                                 {/* Overall Project Statistics - Integrated in same section */}
@@ -1229,7 +1327,7 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
                 </AnimatedSection>
                 {projects.length > 0 && (
                     <AnimatedSection delay={300}>
-                        <div className="card mt-6 sm:mt-8">
+                        <div ref={projectSelectRef} className="card mt-6 sm:mt-8">
                             <label htmlFor="project-select" className="block text-sm font-medium text-gray-300 mb-2">Select a Project</label>
                             <div className="relative">
                                 <select

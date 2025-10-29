@@ -22,6 +22,9 @@ export interface Task {
   section?: string;
   custom_fields?: CustomFieldValue[];
   projects?: Array<{ gid: string; name: string }>;
+  start_at?: string | null;
+  start_on?: string | null;
+  assigned_at?: string | null; // When task was first assigned
 }
 
 // Project analytics statistics

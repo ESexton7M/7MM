@@ -31,12 +31,13 @@ interface ComparisonTabsProps {
   projectDurations: (ProjectDuration & { gid?: string })[];
   highlightedProjects: string[];
   sortMethod: string;
+  onProjectClick?: (projectName: string) => void;
 }
 
 type ComparisonMode = 'projects' | 'sections';
 type TabId = ComparisonMode | string;
 
-const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highlightedProjects, sortMethod }) => {
+const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highlightedProjects, sortMethod, onProjectClick }) => {
   const [activeTab, setActiveTab] = useState<TabId>('projects');
   // Start with the first required section as the default
   const [selectedSection, setSelectedSection] = useState<string>(REQUIRED_SECTIONS[0] || '');
@@ -515,6 +516,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
             <ProjectDurationChart
               durations={projectDurations}
               highlightedProjects={highlightedProjects}
+              onProjectClick={onProjectClick}
             />
           </div>
         )}

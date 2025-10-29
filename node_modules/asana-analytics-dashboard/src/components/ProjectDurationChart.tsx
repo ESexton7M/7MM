@@ -17,9 +17,10 @@ import { formatDurationInWeeks, daysToWeeks } from '../utils/statistics';
 /**
  * ProjectDurationChart - Visualizes project completion durations with highlighting capability
  */
-const ProjectDurationChart: FC<ProjectDurationChartProps> = ({ 
+const ProjectDurationChart: FC<ProjectDurationChartProps & { onProjectClick?: (projectName: string) => void }> = ({ 
   durations,
-  highlightedProjects
+  highlightedProjects,
+  onProjectClick
 }) => {
   // Determine if any projects should be highlighted
   const shouldHighlight = highlightedProjects.length > 0;
@@ -67,7 +68,15 @@ const ProjectDurationChart: FC<ProjectDurationChartProps> = ({
     const showDates = startDate !== '' && endDate !== '';
     
     return (
-      <div className="bg-gray-800 p-3 border border-gray-700 rounded-lg shadow-lg">
+      <div 
+        className="bg-gray-800 p-3 border border-gray-700 rounded-lg shadow-lg transition-all hover:shadow-xl hover:border-indigo-500"
+        onClick={() => {
+          if (onProjectClick && data.name) {
+            onProjectClick(data.name as string);
+          }
+        }}
+        style={{ cursor: onProjectClick ? 'pointer' : 'default' }}
+      >
         <p className="text-gray-200 font-bold mb-1">{data.name}</p>
         <p className="text-gray-300">
           <span className="text-indigo-400 font-semibold">{formatDurationInWeeks(data.originalDuration || data.duration)}</span> to complete
@@ -96,6 +105,9 @@ const ProjectDurationChart: FC<ProjectDurationChartProps> = ({
             <p>Completed: {endDate}</p>
           </div>
         )}
+        {onProjectClick && (
+          <p className="text-xs text-indigo-400 mt-2 italic">Click to view project details</p>
+        )}
       </div>
     );
   };
@@ -106,6 +118,15 @@ const ProjectDurationChart: FC<ProjectDurationChartProps> = ({
         <BarChart
           data={processedDurations}
           margin={{ top: 20, right: 15, left: 10, bottom: 5 }}
+          onClick={(data) => {
+            if (onProjectClick && data && data.activePayload && data.activePayload[0]) {
+              const projectName = data.activePayload[0].payload.name;
+              if (projectName) {
+                onProjectClick(projectName as string);
+              }
+            }
+          }}
+          style={{ cursor: onProjectClick ? 'pointer' : 'default' }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
           <XAxis 
@@ -113,6 +134,7 @@ const ProjectDurationChart: FC<ProjectDurationChartProps> = ({
             stroke="#A0AEC0" 
             hide={processedDurations.length > 8} // Hide axis if too many items on mobile
             fontSize={12}
+            style={{ cursor: onProjectClick ? 'pointer' : 'default' }}
           />
           <YAxis
             stroke="#A0AEC0"
@@ -131,12 +153,19 @@ const ProjectDurationChart: FC<ProjectDurationChartProps> = ({
             dataKey="duration"
             name="Completion Duration"
             maxBarSize={40}
+            onClick={(data) => {
+              if (onProjectClick && data && data.name) {
+                onProjectClick(data.name as string);
+              }
+            }}
+            style={{ cursor: onProjectClick ? 'pointer' : 'default' }}
           >
             {processedDurations.map((entry, index) => (
               <Cell
                 key={`cell-${index}`}
                 fill={entry.highlighted ? '#F59E0B' : '#818CF8'}
                 opacity={shouldHighlight ? (entry.highlighted ? 1 : 0.3) : 1}
+                style={{ cursor: onProjectClick ? 'pointer' : 'default' }}
               />
             ))}
           </Bar>
