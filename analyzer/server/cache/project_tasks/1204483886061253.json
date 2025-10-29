@@ -4,27 +4,157 @@
     "completed": true,
     "completed_at": "2025-10-02T20:15:45.431Z",
     "created_at": "2025-10-01T14:34:50.915Z",
-    "name": "Change popup to hero slider."
+    "custom_fields": [
+      {
+        "gid": "1209276033181319",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1209276033181320",
+            "color": "red",
+            "enabled": true,
+            "name": "Bug",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1209276033181321",
+            "color": "blue",
+            "enabled": true,
+            "name": "Feature Request",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1209276033181322",
+            "color": "green",
+            "enabled": true,
+            "name": "Task",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Ticket Type",
+        "description": "The type of ticket, such as bug, feature request, or task",
+        "created_by": {
+          "gid": "1204481043416950",
+          "name": "Jeff Reed",
+          "resource_type": "user"
+        },
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1207647361570070",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1207647361570073",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1207647361570074",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1207647361570075",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": {
+          "gid": "1204602274567842",
+          "name": "Aura-Maria Moore",
+          "resource_type": "user"
+        },
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "Change popup to hero slider.",
+    "projects": [
+      {
+        "gid": "1204483886061253",
+        "resource_type": "project"
+      },
+      {
+        "gid": "1209275776231155",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1204970619545249",
     "completed": true,
     "completed_at": "2023-07-10T13:57:25.520Z",
     "created_at": "2023-07-05T14:40:17.805Z",
-    "name": "Unplug FB integration"
+    "custom_fields": [],
+    "name": "Unplug FB integration",
+    "projects": [
+      {
+        "gid": "1204483886061253",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1204483886061256",
     "completed": true,
     "completed_at": "2023-06-02T15:33:19.098Z",
     "created_at": "2023-04-27T01:56:39.452Z",
-    "name": "Portfolio Updates"
+    "custom_fields": [],
+    "name": "Portfolio Updates",
+    "projects": [
+      {
+        "gid": "1204483886061253",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1204611177953595",
     "completed": true,
     "completed_at": "2023-05-16T18:09:34.221Z",
     "created_at": "2023-05-16T17:43:01.549Z",
-    "name": "Footer Update"
+    "custom_fields": [],
+    "name": "Footer Update",
+    "projects": [
+      {
+        "gid": "1204483886061253",
+        "resource_type": "project"
+      }
+    ]
   }
 ]

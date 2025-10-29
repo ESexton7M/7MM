@@ -4,167 +4,2885 @@
     "completed": true,
     "completed_at": "2024-07-16T14:25:26.484Z",
     "created_at": "2024-07-11T19:01:50.197Z",
-    "name": "Final Logo Colors "
+    "custom_fields": [
+      {
+        "gid": "1204456891952863",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952864",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952865",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952866",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204456891952868",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952869",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952870",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952871",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952872",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952873",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": {
+          "gid": "1204456891952873",
+          "color": "blue-green",
+          "enabled": true,
+          "name": "Done",
+          "resource_type": "enum_option"
+        },
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": null,
+        "display_value": "Done",
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "Final Logo Colors ",
+    "projects": [
+      {
+        "gid": "1205650522483527",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1206097061535542",
     "completed": true,
     "completed_at": "2024-03-05T16:32:49.012Z",
     "created_at": "2023-12-04T21:04:54.848Z",
-    "name": "First Round of Concepts"
+    "custom_fields": [
+      {
+        "gid": "1204456891952863",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952864",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952865",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952866",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204456891952868",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952869",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952870",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952871",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952872",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952873",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": {
+          "gid": "1204456891952873",
+          "color": "blue-green",
+          "enabled": true,
+          "name": "Done",
+          "resource_type": "enum_option"
+        },
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": null,
+        "display_value": "Done",
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "First Round of Concepts",
+    "projects": [
+      {
+        "gid": "1205650522483527",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1206907793836443",
     "completed": true,
     "completed_at": "2024-04-15T21:39:16.753Z",
     "created_at": "2024-03-22T17:32:34.390Z",
-    "name": "2nd Round of Concepts"
+    "custom_fields": [
+      {
+        "gid": "1204456891952863",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952864",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952865",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952866",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204456891952868",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952869",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952870",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952871",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952872",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952873",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": {
+          "gid": "1204456891952873",
+          "color": "blue-green",
+          "enabled": true,
+          "name": "Done",
+          "resource_type": "enum_option"
+        },
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": null,
+        "display_value": "Done",
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "2nd Round of Concepts",
+    "projects": [
+      {
+        "gid": "1205650522483527",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1207267479612442",
     "completed": true,
     "completed_at": "2024-05-23T21:39:33.789Z",
     "created_at": "2024-05-08T17:09:07.959Z",
-    "name": "Logo Colors"
+    "custom_fields": [
+      {
+        "gid": "1204456891952863",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952864",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952865",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952866",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204456891952868",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952869",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952870",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952871",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952872",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952873",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": {
+          "gid": "1204456891952873",
+          "color": "blue-green",
+          "enabled": true,
+          "name": "Done",
+          "resource_type": "enum_option"
+        },
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": null,
+        "display_value": "Done",
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "Logo Colors",
+    "projects": [
+      {
+        "gid": "1205650522483527",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1205651572120511",
     "completed": true,
     "completed_at": "2023-10-04T20:14:29.556Z",
     "created_at": "2023-10-04T15:19:27.842Z",
-    "name": "Initial Onboarding"
+    "custom_fields": [
+      {
+        "gid": "1204456891952863",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952864",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952865",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952866",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204456891952868",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952869",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952870",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952871",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952872",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952873",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": {
+          "gid": "1204456891952873",
+          "color": "blue-green",
+          "enabled": true,
+          "name": "Done",
+          "resource_type": "enum_option"
+        },
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": null,
+        "display_value": "Done",
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "Initial Onboarding",
+    "projects": [
+      {
+        "gid": "1205650522483527",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1205653154812866",
     "completed": true,
     "completed_at": "2024-05-08T17:09:32.375Z",
     "created_at": "2023-10-04T20:14:53.413Z",
-    "name": "Website Onboarding"
+    "custom_fields": [
+      {
+        "gid": "1204456891952863",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952864",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952865",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952866",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204456891952868",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952869",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952870",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952871",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952872",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952873",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": {
+          "gid": "1204456891952873",
+          "color": "blue-green",
+          "enabled": true,
+          "name": "Done",
+          "resource_type": "enum_option"
+        },
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": null,
+        "display_value": "Done",
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "Website Onboarding",
+    "projects": [
+      {
+        "gid": "1205650522483527",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1205651572120517",
     "completed": false,
     "completed_at": null,
     "created_at": "2023-10-04T15:19:28.034Z",
-    "name": "Assets"
+    "custom_fields": [
+      {
+        "gid": "1204456891952863",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952864",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952865",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952866",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204456891952868",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952869",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952870",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952871",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952872",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952873",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "Assets",
+    "projects": [
+      {
+        "gid": "1205650522483527",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1205653154812868",
     "completed": true,
     "completed_at": "2023-10-26T13:34:00.598Z",
     "created_at": "2023-10-04T20:15:41.856Z",
-    "name": "Branding Report"
-  },
-  {
-    "gid": "1205651572120523",
-    "completed": false,
-    "completed_at": null,
-    "created_at": "2023-10-04T15:19:28.172Z",
-    "name": "Written Content"
+    "custom_fields": [
+      {
+        "gid": "1204456891952863",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952864",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952865",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952866",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204456891952868",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952869",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952870",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952871",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952872",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952873",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": {
+          "gid": "1204456891952873",
+          "color": "blue-green",
+          "enabled": true,
+          "name": "Done",
+          "resource_type": "enum_option"
+        },
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": null,
+        "display_value": "Done",
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "Branding Report",
+    "projects": [
+      {
+        "gid": "1205650522483527",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1205651572120529",
     "completed": true,
     "completed_at": "2024-02-15T16:24:28.706Z",
     "created_at": "2023-10-04T15:19:28.369Z",
-    "name": "Creative Brief"
+    "custom_fields": [
+      {
+        "gid": "1204456891952863",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952864",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952865",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952866",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204456891952868",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952869",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952870",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952871",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952872",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952873",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": {
+          "gid": "1204456891952873",
+          "color": "blue-green",
+          "enabled": true,
+          "name": "Done",
+          "resource_type": "enum_option"
+        },
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": null,
+        "display_value": "Done",
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "Creative Brief",
+    "projects": [
+      {
+        "gid": "1205650522483527",
+        "resource_type": "project"
+      }
+    ]
+  },
+  {
+    "gid": "1205651572120523",
+    "completed": false,
+    "completed_at": null,
+    "created_at": "2023-10-04T15:19:28.172Z",
+    "custom_fields": [
+      {
+        "gid": "1204456891952863",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952864",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952865",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952866",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204456891952868",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952869",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952870",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952871",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952872",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952873",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": {
+          "gid": "1204456891952869",
+          "color": "blue",
+          "enabled": true,
+          "name": "Not Started",
+          "resource_type": "enum_option"
+        },
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": null,
+        "display_value": "Not Started",
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "Written Content",
+    "projects": [
+      {
+        "gid": "1205650522483527",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1205651572179704",
     "completed": false,
     "completed_at": null,
     "created_at": "2023-10-04T15:19:29.705Z",
-    "name": "Design Mockup"
+    "custom_fields": [
+      {
+        "gid": "1204456891952863",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952864",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952865",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952866",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204456891952868",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952869",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952870",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952871",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952872",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952873",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "Design Mockup",
+    "projects": [
+      {
+        "gid": "1205650522483527",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1205651572179710",
     "completed": false,
     "completed_at": null,
     "created_at": "2023-10-04T15:19:29.836Z",
-    "name": "Mockup Internal Review"
+    "custom_fields": [
+      {
+        "gid": "1204456891952863",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952864",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952865",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952866",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204456891952868",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952869",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952870",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952871",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952872",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952873",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "Mockup Internal Review",
+    "projects": [
+      {
+        "gid": "1205650522483527",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1205651572179716",
     "completed": false,
     "completed_at": null,
     "created_at": "2023-10-04T15:19:29.977Z",
-    "name": "Mockup Client Review"
+    "custom_fields": [
+      {
+        "gid": "1204456891952863",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952864",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952865",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952866",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204456891952868",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952869",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952870",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952871",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952872",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952873",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "Mockup Client Review",
+    "projects": [
+      {
+        "gid": "1205650522483527",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1205651572273213",
     "completed": false,
     "completed_at": null,
     "created_at": "2023-10-04T15:19:30.121Z",
-    "name": "Mockup Client Approval"
+    "custom_fields": [
+      {
+        "gid": "1204456891952863",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952864",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952865",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952866",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204456891952868",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952869",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952870",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952871",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952872",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952873",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "Mockup Client Approval",
+    "projects": [
+      {
+        "gid": "1205650522483527",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1205651572273219",
     "completed": false,
     "completed_at": null,
     "created_at": "2023-10-04T15:19:30.274Z",
-    "name": "Mobile Mockup"
+    "custom_fields": [
+      {
+        "gid": "1204456891952863",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952864",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952865",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952866",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204456891952868",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952869",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952870",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952871",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952872",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952873",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "Mobile Mockup",
+    "projects": [
+      {
+        "gid": "1205650522483527",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1205651504508720",
     "completed": false,
     "completed_at": null,
     "created_at": "2023-10-04T15:19:34.783Z",
-    "name": "Gather Photos and Assets into Google Folder"
+    "custom_fields": [
+      {
+        "gid": "1204456891952863",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952864",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952865",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952866",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204456891952868",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952869",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952870",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952871",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952872",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952873",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "Gather Photos and Assets into Google Folder",
+    "projects": [
+      {
+        "gid": "1205650522483527",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1205651504508732",
     "completed": false,
     "completed_at": null,
     "created_at": "2023-10-04T15:19:35.269Z",
-    "name": "Development"
+    "custom_fields": [
+      {
+        "gid": "1204456891952863",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952864",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952865",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952866",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204456891952868",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952869",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952870",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952871",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952872",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952873",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "Development",
+    "projects": [
+      {
+        "gid": "1205650522483527",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1211143101452083",
     "completed": false,
     "completed_at": null,
     "created_at": "2025-08-25T19:06:10.704Z",
-    "name": "Homepage / Theme Review"
+    "custom_fields": [
+      {
+        "gid": "1204456891952863",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952864",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952865",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952866",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204456891952868",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952869",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952870",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952871",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952872",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952873",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "Homepage / Theme Review",
+    "projects": [
+      {
+        "gid": "1205650522483527",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1205651504508738",
     "completed": false,
     "completed_at": null,
     "created_at": "2023-10-04T15:19:35.446Z",
-    "name": "Development Internal Review"
+    "custom_fields": [
+      {
+        "gid": "1204456891952863",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952864",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952865",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952866",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204456891952868",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952869",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952870",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952871",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952872",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952873",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "Development Internal Review",
+    "projects": [
+      {
+        "gid": "1205650522483527",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1205651505621650",
     "completed": false,
     "completed_at": null,
     "created_at": "2023-10-04T15:19:35.625Z",
-    "name": "Development Internal Review Revisions"
+    "custom_fields": [
+      {
+        "gid": "1204456891952863",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952864",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952865",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952866",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204456891952868",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952869",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952870",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952871",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952872",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952873",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "Development Internal Review Revisions",
+    "projects": [
+      {
+        "gid": "1205650522483527",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1205651505621656",
     "completed": false,
     "completed_at": null,
     "created_at": "2023-10-04T15:19:35.809Z",
-    "name": "Development Client Review"
+    "custom_fields": [
+      {
+        "gid": "1204456891952863",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952864",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952865",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952866",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204456891952868",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952869",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952870",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952871",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952872",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952873",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "Development Client Review",
+    "projects": [
+      {
+        "gid": "1205650522483527",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1205651505621662",
     "completed": false,
     "completed_at": null,
     "created_at": "2023-10-04T15:19:35.989Z",
-    "name": "Development Client Approval"
+    "custom_fields": [
+      {
+        "gid": "1204456891952863",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952864",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952865",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952866",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204456891952868",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952869",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952870",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952871",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952872",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952873",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "Development Client Approval",
+    "projects": [
+      {
+        "gid": "1205650522483527",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1205651505693390",
     "completed": false,
     "completed_at": null,
     "created_at": "2023-10-04T15:19:36.843Z",
-    "name": "Launch"
+    "custom_fields": [
+      {
+        "gid": "1204456891952863",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952864",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952865",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952866",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204456891952868",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952869",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952870",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952871",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952872",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952873",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "Launch",
+    "projects": [
+      {
+        "gid": "1205650522483527",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1205651505693396",
     "completed": false,
     "completed_at": null,
     "created_at": "2023-10-04T15:19:36.972Z",
-    "name": "Training Videos"
+    "custom_fields": [
+      {
+        "gid": "1204456891952863",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952864",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952865",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952866",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204456891952868",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952869",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952870",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952871",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952872",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952873",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "Training Videos",
+    "projects": [
+      {
+        "gid": "1205650522483527",
+        "resource_type": "project"
+      }
+    ]
   }
 ]

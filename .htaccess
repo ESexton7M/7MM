@@ -1,0 +1,21 @@
+# Passenger configuration for Plesk
+PassengerEnabled on
+PassengerStartupFile startup.js
+PassengerAppType node
+PassengerMinInstances 1
+PassengerMaxRequestQueueSize 100
+
+# Handle API routes
+RewriteEngine on
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^api/ - [L]
+
+# Handle static files
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule . - [L]
+
+# Handle client-side routing
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /analyzer/dist/index.html [L]

@@ -1,44 +1,311 @@
 [
   {
+    "gid": "1211600754098794",
+    "completed": true,
+    "completed_at": "2025-10-27T13:40:24.579Z",
+    "created_at": "2025-10-09T15:19:02.894Z",
+    "custom_fields": [],
+    "name": "Graphics for November",
+    "projects": [
+      {
+        "gid": "1204571846154022",
+        "resource_type": "project"
+      }
+    ]
+  },
+  {
     "gid": "1211345532760791",
     "completed": true,
     "completed_at": "2025-09-25T16:13:53.518Z",
     "created_at": "2025-09-12T14:44:43.593Z",
-    "name": "October / November graphics"
+    "custom_fields": [],
+    "name": "October / November graphics",
+    "projects": [
+      {
+        "gid": "1204571846154022",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1204759334101914",
     "completed": true,
     "completed_at": "2024-01-25T15:12:33.517Z",
     "created_at": "2023-06-05T15:03:34.122Z",
-    "name": "Bigwheel Skating Bookings"
+    "custom_fields": [
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      },
+      {
+        "gid": "1204571851534906",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204571851534907",
+            "color": "red",
+            "enabled": true,
+            "name": "High priority",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204571851534908",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium priority",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204571851534909",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low priority",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority level?",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": {
+          "gid": "1204456587890470",
+          "name": "Dave Taylor",
+          "resource_type": "user"
+        },
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534911",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204571851534912",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low effort",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204571851534913",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium effort",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204571851534914",
+            "color": "red",
+            "enabled": true,
+            "name": "High effort",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204571851534915",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "Need to scope",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Effort level?",
+        "description": "Asana-created. Track the effort of each task.",
+        "created_by": {
+          "gid": "1204456587890470",
+          "name": "Dave Taylor",
+          "resource_type": "user"
+        },
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534917",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204590847775845",
+            "color": "red",
+            "enabled": true,
+            "name": "Technical Support",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204590847775846",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Update Request",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204571851534923",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "Other",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Type (Work Requests - IT)",
+        "description": "Asana-created. Track the type of each request.",
+        "created_by": {
+          "gid": "1204456587890470",
+          "name": "Dave Taylor",
+          "resource_type": "user"
+        },
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534925",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204571851534926",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204571851534927",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204571851534928",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204571851534929",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204571851534930",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": {
+          "gid": "1204571851534930",
+          "color": "blue-green",
+          "enabled": true,
+          "name": "Done",
+          "resource_type": "enum_option"
+        },
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": {
+          "gid": "1204456587890470",
+          "name": "Dave Taylor",
+          "resource_type": "user"
+        },
+        "display_value": "Done",
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      }
+    ],
+    "name": "Bigwheel Skating Bookings",
+    "projects": [
+      {
+        "gid": "1204571846154022",
+        "resource_type": "project"
+      },
+      {
+        "gid": "1204571851534894",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1205074890846882",
     "completed": true,
     "completed_at": "2023-07-17T20:15:04.089Z",
     "created_at": "2023-07-17T20:02:24.278Z",
-    "name": "Add Graphics to Special Event Page"
+    "custom_fields": [],
+    "name": "Add Graphics to Special Event Page",
+    "projects": [
+      {
+        "gid": "1204571846154022",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1205011971260468",
     "completed": true,
     "completed_at": "2023-07-17T20:03:45.258Z",
     "created_at": "2023-07-11T20:19:31.178Z",
-    "name": "Graphics"
+    "custom_fields": [],
+    "name": "Graphics",
+    "projects": [
+      {
+        "gid": "1204571846154022",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1204630205840922",
     "completed": true,
     "completed_at": "2023-05-22T19:25:41.862Z",
     "created_at": "2023-05-18T15:57:43.193Z",
-    "name": "Follow up on Big Wheel Website"
+    "custom_fields": [],
+    "name": "Follow up on Big Wheel Website",
+    "projects": [
+      {
+        "gid": "1204571846154022",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1204571846154026",
     "completed": true,
     "completed_at": "2023-05-19T02:44:43.633Z",
     "created_at": "2023-05-10T19:01:21.758Z",
-    "name": "Pricing Updates"
+    "custom_fields": [],
+    "name": "Pricing Updates",
+    "projects": [
+      {
+        "gid": "1204571846154022",
+        "resource_type": "project"
+      }
+    ]
   }
 ]

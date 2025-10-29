@@ -3,6 +3,7 @@
  * Add project names exactly as they appear in Asana
  */
 export const projectSkipList: string[] = [
+    "Video and Photo Projects",
     "Altoona ~ Station Sites",
     "Johnstown ~ Station Sites",
     "State College ~ Station Sites",

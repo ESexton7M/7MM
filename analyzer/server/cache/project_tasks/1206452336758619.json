@@ -4,27 +4,399 @@
     "completed": true,
     "completed_at": "2024-12-23T19:12:05.093Z",
     "created_at": "2024-01-26T15:13:27.302Z",
-    "name": "Mockup"
+    "custom_fields": [],
+    "name": "Mockup",
+    "projects": [
+      {
+        "gid": "1206452336758619",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1210161702273812",
     "completed": true,
     "completed_at": "2025-05-14T13:09:39.597Z",
     "created_at": "2025-05-05T17:16:42.440Z",
-    "name": "Submit new information to stores"
+    "custom_fields": [
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      },
+      {
+        "gid": "1205784643136537",
+        "enabled": true,
+        "name": "Points",
+        "description": "",
+        "number_value": null,
+        "precision": 0,
+        "created_by": {
+          "gid": "1211479213851033",
+          "name": "Josh McKenzie",
+          "resource_type": "user"
+        },
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      },
+      {
+        "gid": "1205784883042950",
+        "enabled": true,
+        "name": "URL",
+        "description": "URL of the task",
+        "created_by": {
+          "gid": "1211479213851033",
+          "name": "Josh McKenzie",
+          "resource_type": "user"
+        },
+        "display_value": null,
+        "resource_subtype": "text",
+        "resource_type": "custom_field",
+        "text_value": null,
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "text"
+      },
+      {
+        "gid": "1204686298941275",
+        "enabled": true,
+        "name": "Development URL",
+        "description": "URL of the current project",
+        "created_by": {
+          "gid": "1211479213851033",
+          "name": "Josh McKenzie",
+          "resource_type": "user"
+        },
+        "display_value": null,
+        "resource_subtype": "text",
+        "resource_type": "custom_field",
+        "text_value": null,
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "text"
+      },
+      {
+        "gid": "1208261247610894",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1208261247610895",
+            "color": "green",
+            "enabled": true,
+            "name": "Elementor",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1211578802041249",
+            "color": "red",
+            "enabled": true,
+            "name": "Maintenance",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1208261247610896",
+            "color": "yellow",
+            "enabled": true,
+            "name": "WooCommerce (Payment, Shipping, Products...)",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1208261247610897",
+            "color": "yellow-green",
+            "enabled": true,
+            "name": "WordPress (Plugins, Posts...)",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1208261247610898",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Server (Caching, Filesystem, Firewall...)",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1208261247610899",
+            "color": "aqua",
+            "enabled": true,
+            "name": "Third Party (Emails, MailChimp...)",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1208261247610900",
+            "color": "indigo",
+            "enabled": true,
+            "name": "Custom JavaScript",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1208261247610901",
+            "color": "magenta",
+            "enabled": true,
+            "name": "Custom CSS",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1208261247610902",
+            "color": "orange",
+            "enabled": true,
+            "name": "Custom PHP",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1208261247610903",
+            "color": "hot-pink",
+            "enabled": true,
+            "name": "Domain (DNS, Forwarding...)",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1208261247610904",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "Other (see description)",
+            "resource_type": "enum_option"
+          }
+        ],
+        "multi_enum_values": [],
+        "name": "Properties",
+        "description": "Specific attributes of this task that you should be expecting to touch",
+        "created_by": {
+          "gid": "1211479213851033",
+          "name": "Josh McKenzie",
+          "resource_type": "user"
+        },
+        "display_value": null,
+        "resource_subtype": "multi_enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "multi_enum"
+      }
+    ],
+    "name": "Submit new information to stores",
+    "projects": [
+      {
+        "gid": "1205784524386175",
+        "resource_type": "project"
+      },
+      {
+        "gid": "1206452336758619",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1207139106437049",
     "completed": true,
     "completed_at": "2025-05-14T13:09:21.715Z",
     "created_at": "2024-04-22T16:03:13.947Z",
-    "name": "Match Categories to the spreadsheet"
+    "custom_fields": [
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      },
+      {
+        "gid": "1205784643136537",
+        "enabled": true,
+        "name": "Points",
+        "description": "",
+        "number_value": null,
+        "precision": 0,
+        "created_by": {
+          "gid": "1211479213851033",
+          "name": "Josh McKenzie",
+          "resource_type": "user"
+        },
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      },
+      {
+        "gid": "1205784883042950",
+        "enabled": true,
+        "name": "URL",
+        "description": "URL of the task",
+        "created_by": {
+          "gid": "1211479213851033",
+          "name": "Josh McKenzie",
+          "resource_type": "user"
+        },
+        "display_value": null,
+        "resource_subtype": "text",
+        "resource_type": "custom_field",
+        "text_value": null,
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "text"
+      },
+      {
+        "gid": "1204686298941275",
+        "enabled": true,
+        "name": "Development URL",
+        "description": "URL of the current project",
+        "created_by": {
+          "gid": "1211479213851033",
+          "name": "Josh McKenzie",
+          "resource_type": "user"
+        },
+        "display_value": null,
+        "resource_subtype": "text",
+        "resource_type": "custom_field",
+        "text_value": null,
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "text"
+      },
+      {
+        "gid": "1208261247610894",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1208261247610895",
+            "color": "green",
+            "enabled": true,
+            "name": "Elementor",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1211578802041249",
+            "color": "red",
+            "enabled": true,
+            "name": "Maintenance",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1208261247610896",
+            "color": "yellow",
+            "enabled": true,
+            "name": "WooCommerce (Payment, Shipping, Products...)",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1208261247610897",
+            "color": "yellow-green",
+            "enabled": true,
+            "name": "WordPress (Plugins, Posts...)",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1208261247610898",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Server (Caching, Filesystem, Firewall...)",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1208261247610899",
+            "color": "aqua",
+            "enabled": true,
+            "name": "Third Party (Emails, MailChimp...)",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1208261247610900",
+            "color": "indigo",
+            "enabled": true,
+            "name": "Custom JavaScript",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1208261247610901",
+            "color": "magenta",
+            "enabled": true,
+            "name": "Custom CSS",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1208261247610902",
+            "color": "orange",
+            "enabled": true,
+            "name": "Custom PHP",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1208261247610903",
+            "color": "hot-pink",
+            "enabled": true,
+            "name": "Domain (DNS, Forwarding...)",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1208261247610904",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "Other (see description)",
+            "resource_type": "enum_option"
+          }
+        ],
+        "multi_enum_values": [],
+        "name": "Properties",
+        "description": "Specific attributes of this task that you should be expecting to touch",
+        "created_by": {
+          "gid": "1211479213851033",
+          "name": "Josh McKenzie",
+          "resource_type": "user"
+        },
+        "display_value": null,
+        "resource_subtype": "multi_enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "multi_enum"
+      }
+    ],
+    "name": "Match Categories to the spreadsheet",
+    "projects": [
+      {
+        "gid": "1205784524386175",
+        "resource_type": "project"
+      },
+      {
+        "gid": "1206452336758619",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1206452336758629",
     "completed": true,
     "completed_at": "2025-02-06T14:14:36.276Z",
     "created_at": "2024-01-26T15:23:18.316Z",
-    "name": "Development"
+    "custom_fields": [],
+    "name": "Development",
+    "projects": [
+      {
+        "gid": "1206452336758619",
+        "resource_type": "project"
+      }
+    ]
   }
 ]

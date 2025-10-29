@@ -19,7 +19,8 @@ import type {
   Task, 
   ProjectData, 
   ProjectDuration,
-  Stats
+  Stats,
+  CustomFieldValue
 } from './types';
 
 // Import environment utilities
@@ -53,6 +54,7 @@ export default function App() {
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [highlightQuery, setHighlightQuery] = useState<string>('');
     const [highlightedProjects, setHighlightedProjects] = useState<string[]>([]);
+    const [typeFilter, setTypeFilter] = useState<string>('all');
     const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
         start: '', // Will be set to a default in useEffect
         end: ''    // Will be set to a default in useEffect
@@ -94,6 +96,15 @@ export default function App() {
                 );
             }
             
+            // Apply type filter
+            if (typeFilter && typeFilter !== 'all') {
+                filtered = filtered.filter(project => {
+                    const projectType = String(project.type || 'N/A');
+                    const filterValue = String(typeFilter);
+                    return projectType.toLowerCase() === filterValue.toLowerCase();
+                });
+            }
+            
             // Apply date range filter
             if (dateRange.start || dateRange.end) {
                 filtered = filtered.filter(project => {
@@ -109,7 +120,7 @@ export default function App() {
             
             setFilteredDurations(filtered);
         }
-    }, [projectDurations, searchQuery, dateRange, projectSort]);
+    }, [projectDurations, searchQuery, dateRange, projectSort, typeFilter]);
 
     // Handle highlight updates
     useEffect(() => {
@@ -244,6 +255,52 @@ export default function App() {
         }).sort((a, b) => b.span - a.span);
     }, []);
 
+    // Helper: Extract website type from custom fields
+    const getWebsiteType = useCallback((project: any): string => {
+        // Debug: log the project custom fields
+        console.log('Project custom fields for', project.name, ':', project.custom_fields);
+        
+        // Check project-level custom fields first
+        if (project.custom_fields && project.custom_fields.length > 0) {
+            const typeField = project.custom_fields.find((cf: CustomFieldValue) => 
+                cf.name?.toLowerCase() === 'type'
+            );
+            console.log('Found type field:', typeField);
+            if (typeField) {
+                return typeField.display_value || typeField.text_value || 'N/A';
+            }
+        }
+        return 'N/A';
+    }, []);
+
+    // Helper: Extract sale price from custom fields
+    const getSalePrice = useCallback((project: any): number | string => {
+        // Check project-level custom fields first
+        if (project.custom_fields && project.custom_fields.length > 0) {
+            const priceField = project.custom_fields.find((cf: CustomFieldValue) => 
+                cf.name?.toLowerCase() === 'sale price'
+            );
+            console.log('Found price field:', priceField);
+            if (priceField) {
+                if (priceField.number_value !== undefined && priceField.number_value !== null) {
+                    return priceField.number_value;
+                }
+                if (priceField.display_value) {
+                    // Try to parse the display value as a number if it looks like currency
+                    const numericValue = parseFloat(priceField.display_value.replace(/[,$]/g, ''));
+                    if (!isNaN(numericValue)) {
+                        return numericValue;
+                    }
+                    return priceField.display_value;
+                }
+                if (priceField.text_value) {
+                    return priceField.text_value;
+                }
+            }
+        }
+        return 'N/A';
+    }, []);
+
     // Helper: Process dashboard data
     const processDataForDashboard = useCallback((tasks: Task[]) => {
         let completedCount = 0;
@@ -351,7 +408,7 @@ export default function App() {
                 // Step 2: Fetch projects from each workspace
                 const allProjects = [];
                 for (const workspace of workspacesResult.data) {
-                    const projectsResponse = await fetch(`${ASANA_API_BASE}/projects?workspace=${workspace.gid}&opt_fields=name,gid,archived`, {
+                    const projectsResponse = await fetch(`${ASANA_API_BASE}/projects?workspace=${workspace.gid}&opt_fields=name,gid,archived,custom_fields.name,custom_fields.display_value,custom_fields.text_value,custom_fields.number_value`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
                     
@@ -382,7 +439,7 @@ export default function App() {
                     
                     if (!projectTasks) {
                         // Fetch tasks if not in cache
-                        const tasksResponse = await fetch(`${ASANA_API_BASE}/tasks?project=${project.gid}&opt_fields=created_at,completed,completed_at,name&limit=100`, {
+                        const tasksResponse = await fetch(`${ASANA_API_BASE}/tasks?project=${project.gid}&opt_fields=created_at,completed,completed_at,name,custom_fields,projects&limit=100`, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
                         
@@ -409,7 +466,7 @@ export default function App() {
             }
             
             // Step 5: Calculate durations with robust error handling
-            const durations: { name: string; duration: number; created: string; completed: string }[] = [];
+            const durations: ProjectDuration[] = [];
             
             allTasksResults.forEach((result) => {
                 const { project, tasks } = result;
@@ -417,6 +474,16 @@ export default function App() {
                 // Skip if no tasks or invalid data
                 if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
                     return;
+                }
+                
+                // Filter out projects from "Video and Photo Projects" group
+                if (tasks.length > 0 && tasks[0]?.projects && tasks[0].projects.length > 0) {
+                    const isVideoPhotoProject = tasks[0].projects.some(p => 
+                        p.name && p.name.toLowerCase() === 'video and photo projects'
+                    );
+                    if (isVideoPhotoProject) {
+                        return; // Skip this project
+                    }
                 }
                 
                 // Look for "Launch" or "Completed" task that is marked as completed
@@ -448,11 +515,17 @@ export default function App() {
                                 const duration = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
                                 
                                 if (duration > 0) { // Exclude projects completed in 0 days
+                                    // Extract type and sale price from project custom fields
+                                    const type = getWebsiteType(project);
+                                    const salePrice = getSalePrice(project);
+                                    
                                     durations.push({
                                         name: project.name,
                                         duration,
                                         created: startDate.toISOString(),
                                         completed: endDate.toISOString(),
+                                        type,
+                                        salePrice
                                     });
                                 }
                             }
@@ -479,7 +552,7 @@ export default function App() {
     }, [token, projectSort, ASANA_API_BASE]);
     
     // Helper function to sort project durations
-    const sortProjectDurations = (durations: any[], sortMethod: string) => {
+    const sortProjectDurations = (durations: ProjectDuration[], sortMethod: string) => {
         switch (sortMethod) {
             case 'created-asc':
                 durations.sort((a, b) => {
@@ -510,6 +583,34 @@ export default function App() {
                 break;
             case 'alpha-desc':
                 durations.sort((a, b) => b.name.localeCompare(a.name));
+                break;
+            case 'type-asc':
+                durations.sort((a, b) => {
+                    const typeA = String(a.type || 'N/A');
+                    const typeB = String(b.type || 'N/A');
+                    return typeA.localeCompare(typeB);
+                });
+                break;
+            case 'type-desc':
+                durations.sort((a, b) => {
+                    const typeA = String(a.type || 'N/A');
+                    const typeB = String(b.type || 'N/A');
+                    return typeB.localeCompare(typeA);
+                });
+                break;
+            case 'price-asc':
+                durations.sort((a, b) => {
+                    const priceA = typeof a.salePrice === 'number' ? a.salePrice : -1;
+                    const priceB = typeof b.salePrice === 'number' ? b.salePrice : -1;
+                    return priceA - priceB;
+                });
+                break;
+            case 'price-desc':
+                durations.sort((a, b) => {
+                    const priceA = typeof a.salePrice === 'number' ? a.salePrice : -1;
+                    const priceB = typeof b.salePrice === 'number' ? b.salePrice : -1;
+                    return priceB - priceA;
+                });
                 break;
             case 'duration-desc':
                 durations.sort((a, b) => b.duration - a.duration);
@@ -582,7 +683,7 @@ export default function App() {
             // Fetch projects from each workspace
             const allProjects = [];
             for (const workspace of workspacesResult.data) {
-                const projectsResponse = await fetch(`${ASANA_API_BASE}/projects?workspace=${workspace.gid}&opt_fields=name,gid,archived`, {
+                const projectsResponse = await fetch(`${ASANA_API_BASE}/projects?workspace=${workspace.gid}&opt_fields=name,gid,archived,custom_fields.name,custom_fields.display_value,custom_fields.text_value,custom_fields.number_value`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
@@ -844,8 +945,29 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
                                         <option value="created-desc">Newest Creation Date</option>
                                         <option value="completed-asc">Oldest Completion Date</option>
                                         <option value="completed-desc">Newest Completion Date</option>
+                                        <option value="type-asc">Type (A-Z)</option>
+                                        <option value="type-desc">Type (Z-A)</option>
+                                        <option value="price-asc">Price (Low to High)</option>
+                                        <option value="price-desc">Price (High to Low)</option>
                                         <option value="alpha-asc">A-Z</option>
                                         <option value="alpha-desc">Z-A</option>
+                                    </select>
+                                </div>
+
+                                {/* Type Filter */}
+                                <div className="w-full">
+                                    <label htmlFor="type-filter" className="block text-sm font-medium text-gray-300 mb-2">Filter by Type</label>
+                                    <select
+                                        id="type-filter"
+                                        value={typeFilter}
+                                        onChange={e => setTypeFilter(e.target.value)}
+                                        className="w-full h-10 bg-[#1e1e1e] text-gray-200 rounded-md px-3 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300"
+                                    >
+                                        <option value="all">All Types</option>
+                                        <option value="Landing Page">Landing Page</option>
+                                        <option value="Small Website">Small Website</option>
+                                        <option value="Large Website">Large Website</option>
+                                        <option value="N/A">N/A</option>
                                     </select>
                                 </div>
                             </div>

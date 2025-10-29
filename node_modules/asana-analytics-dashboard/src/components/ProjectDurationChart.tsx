@@ -40,7 +40,7 @@ const ProjectDurationChart: FC<ProjectDurationChartProps> = ({
   const CustomTooltip: FC<{ active?: boolean; payload?: Array<{ payload: Record<string, unknown> }> }> = ({ active, payload }) => {
     if (!active || !payload || !payload[0]) return null;
 
-    const data = payload[0].payload as (typeof processedDurations)[0];
+    const data = payload[0].payload as (typeof processedDurations)[0] & { type?: string; salePrice?: number | string };
     
     // Format dates if they exist and are valid
     const formatDate = (dateString: string | null): string => {
@@ -50,6 +50,15 @@ const ProjectDurationChart: FC<ProjectDurationChartProps> = ({
       } catch {
         return '';
       }
+    };
+    
+    // Format price
+    const formatPrice = (price: number | string | undefined): string => {
+      if (price === undefined || price === null || price === 'N/A') return 'N/A';
+      if (typeof price === 'number') {
+        return `$${price.toLocaleString()}`;
+      }
+      return String(price);
     };
     
     // Only show dates section if valid dates are provided
@@ -66,6 +75,16 @@ const ProjectDurationChart: FC<ProjectDurationChartProps> = ({
         <p className="text-gray-400 text-xs">
           ({data.originalDuration || data.duration} days)
         </p>
+        {data.type && (
+          <p className="text-gray-300 text-sm mt-1">
+            Type: <span className="text-cyan-400">{data.type}</span>
+          </p>
+        )}
+        {data.salePrice !== undefined && (
+          <p className="text-gray-300 text-sm">
+            Sale Price: <span className="text-green-400">{formatPrice(data.salePrice)}</span>
+          </p>
+        )}
         {showDates && (
           <div className="text-xs text-gray-400 mt-2">
             <p>Started: {startDate}</p>

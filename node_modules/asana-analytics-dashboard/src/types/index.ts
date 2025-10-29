@@ -2,6 +2,15 @@
  * Core data types for the Asana Analytics Dashboard
  */
 
+// Custom field value interface
+export interface CustomFieldValue {
+  gid: string;
+  name?: string;
+  display_value?: string;
+  text_value?: string;
+  number_value?: number;
+}
+
 // Asana Task entity
 export interface Task {
   gid: string;
@@ -11,6 +20,8 @@ export interface Task {
   completed: boolean;
   completed_at?: string | null;
   section?: string;
+  custom_fields?: CustomFieldValue[];
+  projects?: Array<{ gid: string; name: string }>;
 }
 
 // Project analytics statistics
@@ -43,6 +54,8 @@ export interface ProjectDuration {
   created: string;
   completed: string;
   highlighted?: boolean;
+  type?: string;
+  salePrice?: number | string;
 }
 
 // Section analytics data

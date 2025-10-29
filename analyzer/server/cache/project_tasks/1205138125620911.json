@@ -4,13 +4,453 @@
     "completed": false,
     "completed_at": null,
     "created_at": "2023-07-25T18:16:11.360Z",
-    "name": "Review Website"
+    "custom_fields": [
+      {
+        "gid": "1205138125620923",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1205138125620924",
+            "color": "red",
+            "enabled": true,
+            "name": "High priority",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138125620925",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium priority",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138125620926",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low priority",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority level?",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": {
+          "gid": "1204456587890470",
+          "name": "Dave Taylor",
+          "resource_type": "user"
+        },
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1205138125620928",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1205138125620929",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low effort",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138129444938",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium effort",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138129444939",
+            "color": "red",
+            "enabled": true,
+            "name": "High effort",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138129444940",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "Need to scope",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Effort level?",
+        "description": "Asana-created. Track the effort of each task.",
+        "created_by": {
+          "gid": "1204456587890470",
+          "name": "Dave Taylor",
+          "resource_type": "user"
+        },
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1205138129444942",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1205138129444943",
+            "color": "red",
+            "enabled": true,
+            "name": "Access request",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138129444944",
+            "color": "orange",
+            "enabled": true,
+            "name": "Troubleshooting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138129444945",
+            "color": "yellow",
+            "enabled": true,
+            "name": "New hardware",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138129444946",
+            "color": "green",
+            "enabled": true,
+            "name": "New software",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138129444947",
+            "color": "blue",
+            "enabled": true,
+            "name": "Password reset",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138129444948",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "Other",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Type (Work Requests - IT)",
+        "description": "Asana-created. Track the type of each request.",
+        "created_by": {
+          "gid": "1204456587890470",
+          "name": "Dave Taylor",
+          "resource_type": "user"
+        },
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1205138129444950",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1205138129444951",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138129444952",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138129444953",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138129444954",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138129444955",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": {
+          "gid": "1205138129444951",
+          "color": "blue",
+          "enabled": true,
+          "name": "Not Started",
+          "resource_type": "enum_option"
+        },
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": {
+          "gid": "1204456587890470",
+          "name": "Dave Taylor",
+          "resource_type": "user"
+        },
+        "display_value": "Not Started",
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      }
+    ],
+    "name": "Review Website",
+    "projects": [
+      {
+        "gid": "1205138125620911",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1205138129445001",
     "completed": false,
     "completed_at": null,
     "created_at": "2023-07-25T18:17:50.035Z",
-    "name": "Content Review"
+    "custom_fields": [
+      {
+        "gid": "1205138125620923",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1205138125620924",
+            "color": "red",
+            "enabled": true,
+            "name": "High priority",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138125620925",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium priority",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138125620926",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low priority",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority level?",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": {
+          "gid": "1204456587890470",
+          "name": "Dave Taylor",
+          "resource_type": "user"
+        },
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1205138125620928",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1205138125620929",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low effort",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138129444938",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium effort",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138129444939",
+            "color": "red",
+            "enabled": true,
+            "name": "High effort",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138129444940",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "Need to scope",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Effort level?",
+        "description": "Asana-created. Track the effort of each task.",
+        "created_by": {
+          "gid": "1204456587890470",
+          "name": "Dave Taylor",
+          "resource_type": "user"
+        },
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1205138129444942",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1205138129444943",
+            "color": "red",
+            "enabled": true,
+            "name": "Access request",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138129444944",
+            "color": "orange",
+            "enabled": true,
+            "name": "Troubleshooting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138129444945",
+            "color": "yellow",
+            "enabled": true,
+            "name": "New hardware",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138129444946",
+            "color": "green",
+            "enabled": true,
+            "name": "New software",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138129444947",
+            "color": "blue",
+            "enabled": true,
+            "name": "Password reset",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138129444948",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "Other",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Type (Work Requests - IT)",
+        "description": "Asana-created. Track the type of each request.",
+        "created_by": {
+          "gid": "1204456587890470",
+          "name": "Dave Taylor",
+          "resource_type": "user"
+        },
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1205138129444950",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1205138129444951",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138129444952",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138129444953",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138129444954",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1205138129444955",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": {
+          "gid": "1205138129444951",
+          "color": "blue",
+          "enabled": true,
+          "name": "Not Started",
+          "resource_type": "enum_option"
+        },
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": {
+          "gid": "1204456587890470",
+          "name": "Dave Taylor",
+          "resource_type": "user"
+        },
+        "display_value": "Not Started",
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      }
+    ],
+    "name": "Content Review",
+    "projects": [
+      {
+        "gid": "1205138125620911",
+        "resource_type": "project"
+      }
+    ]
   }
 ]

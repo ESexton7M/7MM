@@ -4,20 +4,245 @@
     "completed": true,
     "completed_at": "2025-09-02T16:41:37.640Z",
     "created_at": "2025-08-29T14:47:58.356Z",
-    "name": "Providers"
+    "custom_fields": [
+      {
+        "gid": "1209276033181319",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1209276033181320",
+            "color": "red",
+            "enabled": true,
+            "name": "Bug",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1209276033181321",
+            "color": "blue",
+            "enabled": true,
+            "name": "Feature Request",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1209276033181322",
+            "color": "green",
+            "enabled": true,
+            "name": "Task",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Ticket Type",
+        "description": "The type of ticket, such as bug, feature request, or task",
+        "created_by": {
+          "gid": "1204481043416950",
+          "name": "Jeff Reed",
+          "resource_type": "user"
+        },
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1207647361570070",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1207647361570073",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1207647361570074",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1207647361570075",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": {
+          "gid": "1204602274567842",
+          "name": "Aura-Maria Moore",
+          "resource_type": "user"
+        },
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "Providers",
+    "projects": [
+      {
+        "gid": "1204907217411243",
+        "resource_type": "project"
+      },
+      {
+        "gid": "1209275776231155",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1211184918084644",
     "completed": true,
     "completed_at": "2025-09-02T15:43:12.848Z",
     "created_at": "2025-08-29T15:28:16.386Z",
-    "name": "Update Olean Site Page"
+    "custom_fields": [
+      {
+        "gid": "1209276033181319",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1209276033181320",
+            "color": "red",
+            "enabled": true,
+            "name": "Bug",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1209276033181321",
+            "color": "blue",
+            "enabled": true,
+            "name": "Feature Request",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1209276033181322",
+            "color": "green",
+            "enabled": true,
+            "name": "Task",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Ticket Type",
+        "description": "The type of ticket, such as bug, feature request, or task",
+        "created_by": {
+          "gid": "1204481043416950",
+          "name": "Jeff Reed",
+          "resource_type": "user"
+        },
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1207647361570070",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1207647361570073",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1207647361570074",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1207647361570075",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": {
+          "gid": "1204602274567842",
+          "name": "Aura-Maria Moore",
+          "resource_type": "user"
+        },
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "Update Olean Site Page",
+    "projects": [
+      {
+        "gid": "1204907217411243",
+        "resource_type": "project"
+      },
+      {
+        "gid": "1209275776231155",
+        "resource_type": "project"
+      }
+    ]
   },
   {
     "gid": "1204907217411250",
     "completed": false,
     "completed_at": null,
     "created_at": "2023-06-26T13:37:07.103Z",
-    "name": "Domain Needs to be Repointed"
+    "custom_fields": [],
+    "name": "Domain Needs to be Repointed",
+    "projects": [
+      {
+        "gid": "1204907217411243",
+        "resource_type": "project"
+      }
+    ]
   }
 ]
