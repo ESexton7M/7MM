@@ -56,6 +56,7 @@ export interface ProjectDuration {
   highlighted?: boolean;
   type?: string;
   salePrice?: number | string;
+  ecommerce?: string;
 }
 
 // Section analytics data

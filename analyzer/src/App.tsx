@@ -55,11 +55,60 @@ export default function App() {
     const [highlightQuery, setHighlightQuery] = useState<string>('');
     const [highlightedProjects, setHighlightedProjects] = useState<string[]>([]);
     const [typeFilter, setTypeFilter] = useState<string>('all');
+    const [ecommerceFilter, setEcommerceFilter] = useState<string>('all');
+    const [startQuarter, setStartQuarter] = useState<string>('');
+    const [endQuarter, setEndQuarter] = useState<string>('');
     const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
         start: '', // Will be set to a default in useEffect
         end: ''    // Will be set to a default in useEffect
     });
     const [filteredDurations, setFilteredDurations] = useState<typeof projectDurations>([]);
+
+    // Helper: Generate quarter options for the last 5 years and next year
+    const generateQuarterOptions = useCallback(() => {
+        const options = [];
+        const currentYear = new Date().getFullYear();
+        const startYear = currentYear - 5;
+        const endYear = currentYear + 1;
+        
+        for (let year = startYear; year <= endYear; year++) {
+            for (let quarter = 1; quarter <= 4; quarter++) {
+                options.push({ value: `Q${quarter} ${year}`, label: `Q${quarter} ${year}` });
+            }
+        }
+        return options.reverse(); // Most recent first
+    }, []);
+
+    // Helper: Convert quarter string to date range
+    const quarterToDateRange = useCallback((quarterStr: string): { start: string; end: string } => {
+        if (!quarterStr) return { start: '', end: '' };
+        
+        const match = quarterStr.match(/Q(\d) (\d{4})/);
+        if (!match || !match[1] || !match[2]) return { start: '', end: '' };
+        
+        const quarter = parseInt(match[1]);
+        const year = parseInt(match[2]);
+        
+        const quarterStartMonth = (quarter - 1) * 3; // 0, 3, 6, 9
+        const quarterEndMonth = quarterStartMonth + 2; // 2, 5, 8, 11
+        
+        const startDate = new Date(year, quarterStartMonth, 1);
+        const endDate = new Date(year, quarterEndMonth + 1, 0); // Last day of quarter
+        
+        return {
+            start: startDate.toISOString().split('T')[0] || '',
+            end: endDate.toISOString().split('T')[0] || ''
+        };
+    }, []);
+
+    // Update date range when quarters change
+    useEffect(() => {
+        if (startQuarter || endQuarter) {
+            const start = startQuarter ? quarterToDateRange(startQuarter).start : '';
+            const end = endQuarter ? quarterToDateRange(endQuarter).end : '';
+            setDateRange({ start, end });
+        }
+    }, [startQuarter, endQuarter, quarterToDateRange]);
 
     // Set default date range on component mount and auto-fetch projects
     useEffect(() => {
@@ -105,6 +154,17 @@ export default function App() {
                 });
             }
             
+            // Apply e-commerce filter
+            if (ecommerceFilter && ecommerceFilter !== 'all') {
+                console.log('Applying e-commerce filter:', ecommerceFilter);
+                filtered = filtered.filter(project => {
+                    const projectEcommerce = String(project.ecommerce || 'No');
+                    console.log(`Project: ${project.name}, E-commerce value: "${projectEcommerce}", Filter: "${ecommerceFilter}", Match: ${projectEcommerce === ecommerceFilter}`);
+                    return projectEcommerce === ecommerceFilter;
+                });
+                console.log('Filtered count after e-commerce filter:', filtered.length);
+            }
+            
             // Apply date range filter
             if (dateRange.start || dateRange.end) {
                 filtered = filtered.filter(project => {
@@ -120,7 +180,7 @@ export default function App() {
             
             setFilteredDurations(filtered);
         }
-    }, [projectDurations, searchQuery, dateRange, projectSort, typeFilter]);
+    }, [projectDurations, searchQuery, dateRange, projectSort, typeFilter, ecommerceFilter]);
 
     // Handle highlight updates
     useEffect(() => {
@@ -299,6 +359,24 @@ export default function App() {
             }
         }
         return 'N/A';
+    }, []);
+
+    // Helper: Extract E-commerce field from custom fields
+    const getEcommerce = useCallback((project: any): string => {
+        // Check project-level custom fields
+        if (project.custom_fields && project.custom_fields.length > 0) {
+            const ecommerceField = project.custom_fields.find((cf: CustomFieldValue) => 
+                cf.name?.toLowerCase() === 'e-commerce'
+            );
+            if (ecommerceField) {
+                const value = ecommerceField.display_value || ecommerceField.text_value;
+                console.log('E-commerce field value for', project.name, ':', value);
+                // Return the value or default to 'No' if field exists but has no value
+                return value || 'No';
+            }
+        }
+        console.log('No e-commerce field found for', project.name, ', defaulting to No');
+        return 'No';
     }, []);
 
     // Helper: Process dashboard data
@@ -515,9 +593,10 @@ export default function App() {
                                 const duration = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
                                 
                                 if (duration > 0) { // Exclude projects completed in 0 days
-                                    // Extract type and sale price from project custom fields
+                                    // Extract type, sale price, and ecommerce from project custom fields
                                     const type = getWebsiteType(project);
                                     const salePrice = getSalePrice(project);
+                                    const ecommerce = getEcommerce(project);
                                     
                                     durations.push({
                                         name: project.name,
@@ -525,7 +604,8 @@ export default function App() {
                                         created: startDate.toISOString(),
                                         completed: endDate.toISOString(),
                                         type,
-                                        salePrice
+                                        salePrice,
+                                        ecommerce
                                     });
                                 }
                             }
@@ -610,6 +690,20 @@ export default function App() {
                     const priceA = typeof a.salePrice === 'number' ? a.salePrice : -1;
                     const priceB = typeof b.salePrice === 'number' ? b.salePrice : -1;
                     return priceB - priceA;
+                });
+                break;
+            case 'ecommerce-asc':
+                durations.sort((a, b) => {
+                    const ecomA = String(a.ecommerce || 'No');
+                    const ecomB = String(b.ecommerce || 'No');
+                    return ecomA.localeCompare(ecomB);
+                });
+                break;
+            case 'ecommerce-desc':
+                durations.sort((a, b) => {
+                    const ecomA = String(a.ecommerce || 'No');
+                    const ecomB = String(b.ecommerce || 'No');
+                    return ecomB.localeCompare(ecomA);
                 });
                 break;
             case 'duration-desc':
@@ -909,24 +1003,30 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
                                     />
                                 </div>
 
-                                {/* Date Range */}
+                                {/* Quarter Range */}
                                 <div className="w-full">
-                                    <label htmlFor="start-date" className="block text-sm font-medium text-gray-300 mb-2">Date Range</label>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">Quarter Range</label>
                                     <div className="grid grid-cols-2 gap-x-2">
-                                        <input
-                                            id="start-date"
-                                            type="date"
-                                            value={dateRange.start}
-                                            onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                                        <select
+                                            value={startQuarter}
+                                            onChange={(e) => setStartQuarter(e.target.value)}
                                             className="w-full h-10 bg-[#1e1e1e] text-gray-200 rounded-md px-3 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300"
-                                        />
-                                        <input
-                                            id="end-date"
-                                            type="date"
-                                            value={dateRange.end}
-                                            onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                                        >
+                                            <option value="">Start Quarter</option>
+                                            {generateQuarterOptions().map(option => (
+                                                <option key={option.value} value={option.value}>{option.label}</option>
+                                            ))}
+                                        </select>
+                                        <select
+                                            value={endQuarter}
+                                            onChange={(e) => setEndQuarter(e.target.value)}
                                             className="w-full h-10 bg-[#1e1e1e] text-gray-200 rounded-md px-3 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300"
-                                        />
+                                        >
+                                            <option value="">End Quarter</option>
+                                            {generateQuarterOptions().map(option => (
+                                                <option key={option.value} value={option.value}>{option.label}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                 </div>
 
@@ -949,6 +1049,8 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
                                         <option value="type-desc">Type (Z-A)</option>
                                         <option value="price-asc">Price (Low to High)</option>
                                         <option value="price-desc">Price (High to Low)</option>
+                                        <option value="ecommerce-asc">E-commerce (A-Z)</option>
+                                        <option value="ecommerce-desc">E-commerce (Z-A)</option>
                                         <option value="alpha-asc">A-Z</option>
                                         <option value="alpha-desc">Z-A</option>
                                     </select>
@@ -968,6 +1070,21 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
                                         <option value="Small Website">Small Website</option>
                                         <option value="Large Website">Large Website</option>
                                         <option value="N/A">N/A</option>
+                                    </select>
+                                </div>
+
+                                {/* E-commerce Filter */}
+                                <div className="w-full">
+                                    <label htmlFor="ecommerce-filter" className="block text-sm font-medium text-gray-300 mb-2">Filter by E-commerce</label>
+                                    <select
+                                        id="ecommerce-filter"
+                                        value={ecommerceFilter}
+                                        onChange={e => setEcommerceFilter(e.target.value)}
+                                        className="w-full h-10 bg-[#1e1e1e] text-gray-200 rounded-md px-3 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300"
+                                    >
+                                        <option value="all">All Projects</option>
+                                        <option value="Yes">E-commerce</option>
+                                        <option value="No">No E-commerce</option>
                                     </select>
                                 </div>
                             </div>

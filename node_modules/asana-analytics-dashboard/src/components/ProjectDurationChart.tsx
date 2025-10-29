@@ -40,7 +40,7 @@ const ProjectDurationChart: FC<ProjectDurationChartProps> = ({
   const CustomTooltip: FC<{ active?: boolean; payload?: Array<{ payload: Record<string, unknown> }> }> = ({ active, payload }) => {
     if (!active || !payload || !payload[0]) return null;
 
-    const data = payload[0].payload as (typeof processedDurations)[0] & { type?: string; salePrice?: number | string };
+    const data = payload[0].payload as (typeof processedDurations)[0] & { type?: string; salePrice?: number | string; ecommerce?: string };
     
     // Format dates if they exist and are valid
     const formatDate = (dateString: string | null): string => {
@@ -83,6 +83,11 @@ const ProjectDurationChart: FC<ProjectDurationChartProps> = ({
         {data.salePrice !== undefined && (
           <p className="text-gray-300 text-sm">
             Sale Price: <span className="text-green-400">{formatPrice(data.salePrice)}</span>
+          </p>
+        )}
+        {data.ecommerce && (
+          <p className="text-gray-300 text-sm">
+            E-commerce: <span className="text-purple-400">{data.ecommerce === 'Yes' ? 'Yes' : 'No'}</span>
           </p>
         )}
         {showDates && (
