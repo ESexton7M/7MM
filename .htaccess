@@ -1,15 +1,6 @@
-# Plesk Node.js Application
-# The Node.js app (startup.js/app.js) handles all routing
-# No Apache rewrite rules needed
+# .htaccess disabled for Plesk Node.js
+# All routing is handled by the Node.js application (startup.js/app.js)
+# This file intentionally left minimal to avoid conflicts
 
-# Optional: Add security headers
-<IfModule mod_headers.c>
-    Header set X-Content-Type-Options "nosniff"
-    Header set X-Frame-Options "SAMEORIGIN"
-    Header set X-XSS-Protection "1; mode=block"
-</IfModule>
-
-# Optional: Enable compression
-<IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
-</IfModule>
+# Do NOT add RewriteEngine or RewriteRule directives
+# They will cause redirect loops with Plesk Node.js

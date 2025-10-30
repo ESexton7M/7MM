@@ -399,12 +399,13 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
         
         // Use section-specific duration if available, otherwise use the project's overall duration
         const sectionData = projectSectionData[project.name];
-        const duration = sectionData ? sectionData.sectionDuration : project.duration;
+        const durationInDays = sectionData ? sectionData.sectionDuration : project.duration;
         const completedDate = sectionData ? sectionData.completed : project.completed;
         
         return {
           name: project.name,
-          duration,
+          duration: daysToWeeks(durationInDays), // Convert to weeks for chart display
+          originalDuration: durationInDays, // Keep original days for tooltip
           completed: completedDate,
           highlighted: isHighlighted,
           section: sectionToCompare
@@ -426,10 +427,10 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
       <div className="bg-gray-800 p-3 border border-gray-700 rounded-lg shadow-lg">
         <p className="text-gray-200 font-bold mb-1">{data.name}</p>
         <p className="text-gray-300">
-          <span className="text-indigo-400 font-semibold">{formatDurationInWeeks(data.duration)}</span> for {data.section}
+          <span className="text-indigo-400 font-semibold">{formatDurationInWeeks(data.originalDuration || data.duration * 7)}</span> for {data.section}
         </p>
         <p className="text-gray-400 text-xs">
-          ({data.duration} days)
+          ({data.originalDuration || Math.round(data.duration * 7)} days)
         </p>
         {data.completed && (
           <p className="text-gray-400 text-sm mt-1">
@@ -553,7 +554,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
                     stroke="#A0AEC0"
                     fontSize={12}
                     label={{
-                      value: 'Days',
+                      value: 'Weeks',
                       angle: -90,
                       position: 'insideLeft',
                       fill: '#E2E8F0',

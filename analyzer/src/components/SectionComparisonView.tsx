@@ -709,48 +709,84 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
           </div>
           
           {/* Projects comparison for selected section */}
-          <div className="space-y-4">
-            {filteredProjects.map((project, idx) => {
-              const isHighlighted = highlightedProjects.some(h => 
-                project.projectName.toLowerCase().includes(h.toLowerCase())
-              );
-              
-              const sectionData = project.sections[selectedSection];
-              const barColor = debugGetSectionCategoryColor(selectedSection, sectionData?.isInProgress);
-              
-              return (
-                <div 
-                  key={idx} 
-                  className={`transition-all ${
-                    isHighlighted ? 'scale-101 shadow-lg border border-indigo-500' : ''
-                  }`}
-                >
-                  <div className="flex items-center mb-1">
-                    <div className="w-48 truncate" title={project.projectName}>
-                      <span className={isHighlighted ? 'font-bold text-indigo-300' : ''}>
-                        {project.projectName}
-                      </span>
+          <div className="flex items-start gap-4">
+            {/* Y-axis with week labels */}
+            <div className="flex flex-col-reverse items-end pr-2 pt-6" style={{ minWidth: '60px' }}>
+              {(() => {
+                const maxWeeks = Math.ceil(daysToWeeks(maxDuration));
+                const step = Math.max(1, Math.ceil(maxWeeks / 8)); // Create ~8 labels
+                const labels = [];
+                for (let i = 0; i <= maxWeeks; i += step) {
+                  labels.push(i);
+                }
+                // Ensure the max value is included
+                const lastLabel = labels[labels.length - 1];
+                if (lastLabel !== undefined && lastLabel < maxWeeks) {
+                  labels.push(maxWeeks);
+                }
+                
+                return labels.map((weeks) => (
+                  <div 
+                    key={weeks} 
+                    className="text-xs text-gray-400 h-6 flex items-center mb-4"
+                  >
+                    {weeks}w
+                  </div>
+                ));
+              })()}
+            </div>
+            
+            {/* Bar chart */}
+            <div className="flex-1 space-y-4">
+              {filteredProjects.map((project, idx) => {
+                const isHighlighted = highlightedProjects.some(h => 
+                  project.projectName.toLowerCase().includes(h.toLowerCase())
+                );
+                
+                const sectionData = project.sections[selectedSection];
+                const barColor = debugGetSectionCategoryColor(selectedSection, sectionData?.isInProgress);
+                const durationWeeks = daysToWeeks(sectionData?.duration || 0);
+                
+                return (
+                  <div 
+                    key={idx} 
+                    className={`transition-all ${
+                      isHighlighted ? 'scale-101 shadow-lg border border-indigo-500' : ''
+                    }`}
+                  >
+                    <div className="flex items-center mb-1">
+                      <div className="w-48 truncate" title={project.projectName}>
+                        <span className={isHighlighted ? 'font-bold text-indigo-300' : ''}>
+                          {project.projectName}
+                        </span>
+                      </div>
+                      <div className="ml-2 text-xs text-gray-400">
+                        {sectionData?.isInProgress 
+                          ? `${selectedSection}: In progress - ${formatDurationInWeeks(sectionData?.duration || 0)} so far (${sectionData?.taskCount || 0} tasks)`
+                          : `${selectedSection}: ${formatDurationInWeeks(sectionData?.duration || 0)} (${sectionData?.taskCount || 0} tasks)`
+                        }
+                      </div>
                     </div>
-                    <div className="ml-2 text-xs text-gray-400">
-                      {sectionData?.isInProgress 
-                        ? `${selectedSection}: In progress - ${formatDurationInWeeks(sectionData?.duration || 0)} so far (${sectionData?.taskCount || 0} tasks)`
-                        : `${selectedSection}: ${formatDurationInWeeks(sectionData?.duration || 0)} (${sectionData?.taskCount || 0} tasks)`
-                      }
+                    
+                    <div className="h-6 bg-gray-700 rounded-md overflow-hidden relative">
+                      <div 
+                        style={{ 
+                          width: `${((sectionData?.duration || 0) / maxDuration) * 100}%`,
+                          background: `linear-gradient(to right, ${barColor}, ${barColor}dd)`
+                        }}
+                        className={`h-full transition-all ${sectionData?.isInProgress ? 'animate-pulse' : ''}`}
+                      />
+                      {/* Week label on the bar */}
+                      <div className="absolute inset-0 flex items-center pl-2">
+                        <span className="text-xs text-white font-semibold drop-shadow-md">
+                          {durationWeeks}w
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  
-                  <div className="h-6 bg-gray-700 rounded-md overflow-hidden">
-                    <div 
-                      style={{ 
-                        width: `${((sectionData?.duration || 0) / maxDuration) * 100}%`,
-                        background: `linear-gradient(to right, ${barColor}, ${barColor}dd)`
-                      }}
-                      className={`h-full transition-all ${sectionData?.isInProgress ? 'animate-pulse' : ''}`}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
           
           {/* Section statistics */}
