@@ -601,6 +601,13 @@ export default function App() {
                                     const salePrice = getSalePrice(project);
                                     const ecommerce = getEcommerce(project);
                                     
+                                    // Calculate weekly cost if salePrice is a valid number
+                                    let weeklyCost: number | undefined;
+                                    if (typeof salePrice === 'number' && salePrice > 0 && duration > 0) {
+                                        const durationInWeeks = duration / 7;
+                                        weeklyCost = salePrice / durationInWeeks;
+                                    }
+                                    
                                     durations.push({
                                         name: project.name,
                                         duration,
@@ -608,7 +615,8 @@ export default function App() {
                                         completed: endDate.toISOString(),
                                         type,
                                         salePrice,
-                                        ecommerce
+                                        ecommerce,
+                                        weeklyCost
                                     });
                                 }
                             }

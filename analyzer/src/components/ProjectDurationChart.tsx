@@ -12,7 +12,7 @@ import {
 } from 'recharts';
 
 import type { ProjectDurationChartProps } from '../types';
-import { formatDurationInWeeks, daysToWeeks } from '../utils/statistics';
+import { formatDurationInWeeks, daysToWeeks, calculateStatistics } from '../utils/statistics';
 
 /**
  * ProjectDurationChart - Visualizes project completion durations with highlighting capability
@@ -25,6 +25,14 @@ const ProjectDurationChart: FC<ProjectDurationChartProps & { onProjectClick?: (p
   // Determine if any projects should be highlighted
   const shouldHighlight = highlightedProjects.length > 0;
 
+  // Calculate median duration for color coding
+  const medianDuration = useMemo(() => {
+    if (durations.length === 0) return 0;
+    const durationValues = durations.map(d => d.duration);
+    const stats = calculateStatistics(durationValues);
+    return stats.median;
+  }, [durations]);
+
   // Memoize the processed durations to avoid recalculating on every render
   const processedDurations = useMemo(() => {
     return durations.map(duration => ({
@@ -33,15 +41,16 @@ const ProjectDurationChart: FC<ProjectDurationChartProps & { onProjectClick?: (p
       originalDuration: duration.duration, // Keep original for tooltip
       highlighted: shouldHighlight && 
         highlightedProjects.some(query => 
-          duration.name.toLowerCase().includes(query.toLowerCase()))
+          duration.name.toLowerCase().includes(query.toLowerCase())),
+      isAboveMedian: duration.duration > medianDuration
     }));
-  }, [durations, highlightedProjects, shouldHighlight]);
+  }, [durations, highlightedProjects, shouldHighlight, medianDuration]);
 
   // Custom tooltip component for better formatting and display
   const CustomTooltip: FC<{ active?: boolean; payload?: Array<{ payload: Record<string, unknown> }> }> = ({ active, payload }) => {
     if (!active || !payload || !payload[0]) return null;
 
-    const data = payload[0].payload as (typeof processedDurations)[0] & { type?: string; salePrice?: number | string; ecommerce?: string };
+    const data = payload[0].payload as (typeof processedDurations)[0] & { type?: string; salePrice?: number | string; weeklyCost?: number; ecommerce?: string };
     
     // Format dates if they exist and are valid
     const formatDate = (dateString: string | null): string => {
@@ -60,6 +69,12 @@ const ProjectDurationChart: FC<ProjectDurationChartProps & { onProjectClick?: (p
         return `$${price.toLocaleString()}`;
       }
       return String(price);
+    };
+    
+    // Format weekly cost
+    const formatWeeklyCost = (cost: number | undefined): string => {
+      if (cost === undefined) return 'N/A';
+      return `$${Math.round(cost).toLocaleString()}/week`;
     };
     
     // Only show dates section if valid dates are provided
@@ -94,6 +109,11 @@ const ProjectDurationChart: FC<ProjectDurationChartProps & { onProjectClick?: (p
             Sale Price: <span className="text-green-400">{formatPrice(data.salePrice)}</span>
           </p>
         )}
+        {data.weeklyCost !== undefined && (
+          <p className="text-gray-300 text-sm">
+            Weekly Cost: <span className="text-yellow-400 font-semibold">{formatWeeklyCost(data.weeklyCost)}</span>
+          </p>
+        )}
         {data.ecommerce && (
           <p className="text-gray-300 text-sm">
             E-commerce: <span className="text-purple-400">{data.ecommerce === 'Yes' ? 'Yes' : 'No'}</span>
@@ -114,6 +134,23 @@ const ProjectDurationChart: FC<ProjectDurationChartProps & { onProjectClick?: (p
 
   return (
     <div className="w-full h-full">
+      {/* Color Legend */}
+      <div className="flex flex-wrap gap-4 mb-4 justify-center text-sm">
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 rounded" style={{ backgroundColor: '#3B82F6' }}></div>
+          <span className="text-gray-300">At/Below Median Duration</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 rounded" style={{ backgroundColor: '#EF4444' }}></div>
+          <span className="text-gray-300">Above Median Duration</span>
+        </div>
+        {shouldHighlight && (
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded" style={{ backgroundColor: '#F59E0B' }}></div>
+            <span className="text-gray-300">Highlighted Project</span>
+          </div>
+        )}
+      </div>
       <ResponsiveContainer width="100%" height={300} className="sm:!h-[400px]">
         <BarChart
           data={processedDurations}
@@ -160,14 +197,24 @@ const ProjectDurationChart: FC<ProjectDurationChartProps & { onProjectClick?: (p
             }}
             style={{ cursor: onProjectClick ? 'pointer' : 'default' }}
           >
-            {processedDurations.map((entry, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={entry.highlighted ? '#F59E0B' : '#818CF8'}
-                opacity={shouldHighlight ? (entry.highlighted ? 1 : 0.3) : 1}
-                style={{ cursor: onProjectClick ? 'pointer' : 'default' }}
-              />
-            ))}
+            {processedDurations.map((entry, index) => {
+              // Color logic: Orange if highlighted, Red if above median, Blue if at/below median
+              let fillColor = '#3B82F6'; // Blue (at or below median)
+              if (entry.highlighted) {
+                fillColor = '#F59E0B'; // Orange for highlighted projects
+              } else if (entry.isAboveMedian) {
+                fillColor = '#EF4444'; // Red for above median
+              }
+              
+              return (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={fillColor}
+                  opacity={shouldHighlight ? (entry.highlighted ? 1 : 0.3) : 1}
+                  style={{ cursor: onProjectClick ? 'pointer' : 'default' }}
+                />
+              );
+            })}
           </Bar>
         </BarChart>
       </ResponsiveContainer>

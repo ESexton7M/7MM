@@ -59,6 +59,7 @@ export interface ProjectDuration {
   highlighted?: boolean;
   type?: string;
   salePrice?: number | string;
+  weeklyCost?: number;
   ecommerce?: string;
 }
 

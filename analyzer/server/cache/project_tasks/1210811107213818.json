@@ -1241,8 +1241,8 @@
   },
   {
     "gid": "1210814252694048",
-    "completed": false,
-    "completed_at": null,
+    "completed": true,
+    "completed_at": "2025-10-29T20:01:26.973Z",
     "created_at": "2025-07-16T17:56:31.551Z",
     "custom_fields": [
       {
@@ -1323,16 +1323,16 @@
           }
         ],
         "enum_value": {
-          "gid": "1204456891952870",
-          "color": "cool-gray",
+          "gid": "1204456891952873",
+          "color": "blue-green",
           "enabled": true,
-          "name": "In Progress",
+          "name": "Done",
           "resource_type": "enum_option"
         },
         "name": "Task Progress",
         "description": "Asana-created. Track the progress of each task.",
         "created_by": null,
-        "display_value": "In Progress",
+        "display_value": "Done",
         "resource_subtype": "enum",
         "resource_type": "custom_field",
         "is_formula_field": false,
@@ -1564,11 +1564,17 @@
             "resource_type": "enum_option"
           }
         ],
-        "enum_value": null,
+        "enum_value": {
+          "gid": "1204456891952869",
+          "color": "blue",
+          "enabled": true,
+          "name": "Not Started",
+          "resource_type": "enum_option"
+        },
         "name": "Task Progress",
         "description": "Asana-created. Track the progress of each task.",
         "created_by": null,
-        "display_value": null,
+        "display_value": "Not Started",
         "resource_subtype": "enum",
         "resource_type": "custom_field",
         "is_formula_field": false,

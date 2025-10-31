@@ -16,7 +16,13 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer,
-  Cell
+  Cell,
+  ScatterChart,
+  Scatter,
+  ZAxis,
+  PieChart,
+  Pie,
+  Legend
 } from 'recharts';
 
 // Define the specific sections we want to show
@@ -43,6 +49,18 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
   const [selectedSection, setSelectedSection] = useState<string>(REQUIRED_SECTIONS[0] || '');
   // Use our predefined sections instead of fetching from tasks
   const availableSections = REQUIRED_SECTIONS;
+
+  // Helper function to filter out internal/7MM projects
+  const isInternalProject = (projectName: string): boolean => {
+    const lowerName = projectName.toLowerCase();
+    // Check for 7MM or 7 Mountains anywhere in the name
+    return lowerName.includes('7mm') || 
+           lowerName.includes('7 mountains') ||
+           lowerName.includes('7 mountain') ||
+           lowerName.includes('7mc') ||
+           // Also check if the project starts with these patterns
+           /^7\s*m+/.test(lowerName);
+  };
 
   // Helper function to sort section comparison data
   const sortSectionData = (data: any[], sortMethod: string) => {
@@ -444,7 +462,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
   return (
     <div className="space-y-4">
       {/* Tabs */}
-      <div className="flex flex-col sm:flex-row border-b border-gray-700">
+      <div className="flex flex-wrap border-b border-gray-700">
         <button
           className={`py-2 px-3 sm:px-4 font-medium text-sm sm:text-base ${
             activeTab === 'projects'
@@ -508,6 +526,39 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
             ))}
           </div>
         </div>
+
+        <button
+          className={`py-2 px-3 sm:px-4 font-medium text-sm sm:text-base ${
+            activeTab === 'cost-analysis'
+              ? 'text-blue-400 border-b-2 border-blue-400'
+              : 'text-gray-400 hover:text-gray-300'
+          }`}
+          onClick={() => setActiveTab('cost-analysis')}
+        >
+          Cost Analysis
+        </button>
+
+        <button
+          className={`py-2 px-3 sm:px-4 font-medium text-sm sm:text-base ${
+            activeTab === 'website-types'
+              ? 'text-blue-400 border-b-2 border-blue-400'
+              : 'text-gray-400 hover:text-gray-300'
+          }`}
+          onClick={() => setActiveTab('website-types')}
+        >
+          Website Types
+        </button>
+
+        <button
+          className={`py-2 px-3 sm:px-4 font-medium text-sm sm:text-base ${
+            activeTab === 'pricing-efficiency'
+              ? 'text-blue-400 border-b-2 border-blue-400'
+              : 'text-gray-400 hover:text-gray-300'
+          }`}
+          onClick={() => setActiveTab('pricing-efficiency')}
+        >
+          Pricing Efficiency
+        </button>
       </div>
 
       {/* Tab content */}
@@ -700,6 +751,369 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
                 })()}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Cost Analysis Tab */}
+        {activeTab === 'cost-analysis' && (
+          <div className="mt-4">
+            <h3 className="text-xl font-semibold mb-4">Duration vs Price Analysis</h3>
+            {(() => {
+              // Prepare data for scatter plot - only include projects with valid price data and filter out internal projects
+              const scatterData = projectDurations
+                .filter(p => !isInternalProject(p.name))
+                .filter(p => p.type?.toLowerCase() !== 'internal')
+                .filter(p => typeof p.salePrice === 'number' && p.salePrice > 0)
+                .map(p => ({
+                  name: p.name,
+                  duration: daysToWeeks(p.duration),
+                  price: p.salePrice as number,
+                  weeklyCost: p.weeklyCost || 0,
+                  type: p.type || 'Unknown'
+                }));
+
+              if (scatterData.length === 0) {
+                return (
+                  <div className="text-center py-8">
+                    <p className="text-gray-400">No projects with valid pricing data found.</p>
+                  </div>
+                );
+              }
+
+              // Custom tooltip for scatter plot
+              const ScatterTooltip: React.FC<any> = ({ active, payload }) => {
+                if (!active || !payload || !payload[0]) return null;
+                const data = payload[0].payload;
+                return (
+                  <div className="bg-gray-800 p-3 border border-gray-700 rounded-lg shadow-lg">
+                    <p className="text-gray-200 font-bold mb-1">{data.name}</p>
+                    <p className="text-gray-300 text-sm">Duration: <span className="text-indigo-400">{data.duration.toFixed(1)} weeks</span></p>
+                    <p className="text-gray-300 text-sm">Price: <span className="text-green-400">${data.price.toLocaleString()}</span></p>
+                    <p className="text-gray-300 text-sm">Weekly Cost: <span className="text-yellow-400 font-semibold">${Math.round(data.weeklyCost).toLocaleString()}/week</span></p>
+                    <p className="text-gray-300 text-sm">Type: <span className="text-cyan-400">{data.type}</span></p>
+                  </div>
+                );
+              };
+
+              return (
+                <>
+                  <ResponsiveContainer width="100%" height={400}>
+                    <ScatterChart margin={{ top: 20, right: 20, bottom: 60, left: 70 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
+                      <XAxis 
+                        type="number" 
+                        dataKey="duration" 
+                        name="Duration" 
+                        unit=" weeks"
+                        stroke="#A0AEC0"
+                        label={{ value: 'Duration (weeks)', position: 'insideBottom', offset: -10, fill: '#E2E8F0' }}
+                      />
+                      <YAxis 
+                        type="number" 
+                        dataKey="price" 
+                        name="Price" 
+                        unit="$"
+                        stroke="#A0AEC0"
+                        label={{ value: 'Price ($)', angle: -90, position: 'left', offset: 0, fill: '#E2E8F0', style: { textAnchor: 'middle' } }}
+                      />
+                      <ZAxis type="number" dataKey="weeklyCost" range={[50, 400]} name="Weekly Cost" />
+                      <Tooltip content={<ScatterTooltip />} />
+                      <Scatter name="Projects" data={scatterData} fill="#818CF8" />
+                    </ScatterChart>
+                  </ResponsiveContainer>
+
+                  {/* Cost Analysis Statistics */}
+                  <div className="mt-6 pt-6 border-t border-gray-700">
+                    <h4 className="text-lg font-semibold mb-4">Cost Statistics</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {(() => {
+                        const weeklyCosts = scatterData.filter(d => d.weeklyCost > 0).map(d => d.weeklyCost);
+                        const prices = scatterData.map(d => d.price);
+                        
+                        if (weeklyCosts.length === 0) return null;
+                        
+                        const costStats = calculateStatistics(weeklyCosts);
+                        const priceStats = calculateStatistics(prices);
+
+                        return (
+                          <>
+                            <div className="bg-gray-800 p-4 rounded-md">
+                              <p className="text-sm text-gray-400">Avg Weekly Cost</p>
+                              <p className="text-2xl font-bold text-yellow-400">
+                                ${Math.round(costStats.mean).toLocaleString()}/week
+                              </p>
+                            </div>
+                            <div className="bg-gray-800 p-4 rounded-md">
+                              <p className="text-sm text-gray-400">Median Weekly Cost</p>
+                              <p className="text-2xl font-bold text-yellow-400">
+                                ${Math.round(costStats.median).toLocaleString()}/week
+                              </p>
+                            </div>
+                            <div className="bg-gray-800 p-4 rounded-md">
+                              <p className="text-sm text-gray-400">Avg Project Price</p>
+                              <p className="text-2xl font-bold text-green-400">
+                                ${Math.round(priceStats.mean).toLocaleString()}
+                              </p>
+                            </div>
+                            <div className="bg-gray-800 p-4 rounded-md">
+                              <p className="text-sm text-gray-400">Median Project Price</p>
+                              <p className="text-2xl font-bold text-green-400">
+                                ${Math.round(priceStats.median).toLocaleString()}
+                              </p>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* Website Types Tab */}
+        {activeTab === 'website-types' && (
+          <div className="mt-4">
+            <h3 className="text-xl font-semibold mb-4">Website Type Distribution</h3>
+            {(() => {
+              // Count website types - filter out internal projects
+              const filteredProjects = projectDurations.filter(p => !isInternalProject(p.name));
+              const typeCounts = filteredProjects
+                .reduce((acc, p) => {
+                  const type = p.type || 'Unknown';
+                  // Skip N/A, Unknown, and Internal types
+                  if (type !== 'N/A' && type !== 'Unknown' && type.toLowerCase() !== 'internal') {
+                    acc[type] = (acc[type] || 0) + 1;
+                  }
+                  return acc;
+                }, {} as Record<string, number>);
+
+              const pieData = Object.entries(typeCounts).map(([name, value]) => ({
+                name,
+                value
+              }));
+
+              if (pieData.length === 0) {
+                return (
+                  <div className="text-center py-8">
+                    <p className="text-gray-400">No website type data available.</p>
+                  </div>
+                );
+              }
+
+              const COLORS = ['#818CF8', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6'];
+
+              return (
+                <>
+                  <ResponsiveContainer width="100%" height={400}>
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={120}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {pieData.map((_entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+
+                  {/* Type breakdown table */}
+                  <div className="mt-6 pt-6 border-t border-gray-700">
+                    <h4 className="text-lg font-semibold mb-4">Type Breakdown</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {pieData.map((item, index) => (
+                        <div key={item.name} className="bg-gray-800 p-4 rounded-md">
+                          <div className="flex items-center mb-2">
+                            <div 
+                              className="w-4 h-4 rounded mr-2" 
+                              style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                            />
+                            <p className="text-sm font-semibold text-gray-300">{item.name}</p>
+                          </div>
+                          <p className="text-3xl font-bold">{item.value}</p>
+                          <p className="text-xs text-gray-400">
+                            {((item.value / filteredProjects.length) * 100).toFixed(1)}% of total
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* Pricing Efficiency Tab */}
+        {activeTab === 'pricing-efficiency' && (
+          <div className="mt-4">
+            <h3 className="text-xl font-semibold mb-4">Pricing Efficiency by Website Type</h3>
+            {(() => {
+              // Group projects by type and calculate average weekly cost - filter out internal projects
+              const typeData = projectDurations
+                .filter(p => !isInternalProject(p.name))
+                .filter(p => p.type?.toLowerCase() !== 'internal')
+                .filter(p => p.type && p.type !== 'N/A' && p.type !== 'Unknown' && p.weeklyCost && p.weeklyCost > 0)
+                .reduce((acc, p) => {
+                  const type = p.type!;
+                  if (!acc[type]) {
+                    acc[type] = { total: 0, count: 0, projects: [] };
+                  }
+                  acc[type].total += p.weeklyCost!;
+                  acc[type].count += 1;
+                  acc[type].projects.push(p);
+                  return acc;
+                }, {} as Record<string, { total: number; count: number; projects: typeof projectDurations }>);
+
+              const efficiencyData = Object.entries(typeData).map(([type, data]) => ({
+                type,
+                avgWeeklyCost: data.total / data.count,
+                projectCount: data.count,
+                projects: data.projects
+              })).sort((a, b) => b.avgWeeklyCost - a.avgWeeklyCost);
+
+              if (efficiencyData.length === 0) {
+                return (
+                  <div className="text-center py-8">
+                    <p className="text-gray-400">No pricing data available for analysis.</p>
+                  </div>
+                );
+              }
+
+              return (
+                <>
+                  <ResponsiveContainer width="100%" height={400}>
+                    <BarChart
+                      data={efficiencyData}
+                      margin={{ top: 20, right: 30, left: 100, bottom: 80 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
+                      <XAxis 
+                        dataKey="type" 
+                        stroke="#A0AEC0"
+                        angle={-45}
+                        textAnchor="end"
+                        height={100}
+                      />
+                      <YAxis
+                        stroke="#A0AEC0"
+                        domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.1)]}
+                        tickFormatter={(value) => `$${Math.round(value)}`}
+                        label={{ 
+                          value: 'Avg Weekly Cost ($)', 
+                          angle: -90, 
+                          position: 'left',
+                          offset: 0,
+                          fill: '#E2E8F0',
+                          style: { textAnchor: 'middle' }
+                        }}
+                      />
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (!active || !payload || !payload[0]) return null;
+                          const data = payload[0].payload;
+                          return (
+                            <div className="bg-gray-800 p-3 border border-gray-700 rounded-lg shadow-lg">
+                              <p className="text-gray-200 font-bold mb-1">{data.type}</p>
+                              <p className="text-gray-300 text-sm">
+                                Avg Weekly Cost: <span className="text-yellow-400 font-semibold">
+                                  ${Math.round(data.avgWeeklyCost).toLocaleString()}/week
+                                </span>
+                              </p>
+                              <p className="text-gray-400 text-xs">{data.projectCount} projects</p>
+                            </div>
+                          );
+                        }}
+                      />
+                      <Bar dataKey="avgWeeklyCost" fill="#F59E0B" />
+                    </BarChart>
+                  </ResponsiveContainer>
+
+                  {/* Detailed breakdown */}
+                  <div className="mt-6 pt-6 border-t border-gray-700">
+                    <h4 className="text-lg font-semibold mb-4">Efficiency Analysis</h4>
+                    <div className="space-y-4">
+                      {efficiencyData.map(item => {
+                        const durations = item.projects.map(p => p.duration);
+                        const prices = item.projects.map(p => typeof p.salePrice === 'number' ? p.salePrice : 0).filter(p => p > 0);
+                        const durationStats = calculateStatistics(durations);
+                        const priceStats = prices.length > 0 ? calculateStatistics(prices) : null;
+
+                        return (
+                          <div key={item.type} className="bg-gray-800 p-4 rounded-md">
+                            <h5 className="text-lg font-semibold mb-3 text-cyan-400">{item.type}</h5>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                              <div>
+                                <p className="text-gray-400">Avg Weekly Cost</p>
+                                <p className="text-xl font-bold text-yellow-400">
+                                  ${Math.round(item.avgWeeklyCost).toLocaleString()}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-gray-400">Avg Duration</p>
+                                <p className="text-xl font-bold">
+                                  {formatNumber(daysToWeeks(durationStats.mean))}w
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-gray-400">Avg Price</p>
+                                <p className="text-xl font-bold text-green-400">
+                                  {priceStats ? `$${Math.round(priceStats.mean).toLocaleString()}` : 'N/A'}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-gray-400">Projects</p>
+                                <p className="text-xl font-bold">{item.projectCount}</p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Insights */}
+                  <div className="mt-6 pt-6 border-t border-gray-700">
+                    <h4 className="text-lg font-semibold mb-3">💡 Pricing Insights</h4>
+                    <div className="bg-indigo-900 bg-opacity-30 p-4 rounded-md space-y-2">
+                      {(() => {
+                        const highest = efficiencyData[0];
+                        const lowest = efficiencyData[efficiencyData.length - 1];
+                        if (!highest || !lowest) return null;
+                        
+                        return (
+                          <>
+                            <p className="text-gray-300">
+                              <span className="font-semibold text-green-400">Highest weekly cost:</span> {highest.type} 
+                              at ${Math.round(highest.avgWeeklyCost).toLocaleString()}/week
+                            </p>
+                            <p className="text-gray-300">
+                              <span className="font-semibold text-blue-400">Most efficient:</span> {lowest.type} 
+                              at ${Math.round(lowest.avgWeeklyCost).toLocaleString()}/week
+                            </p>
+                            {efficiencyData.length > 1 && (
+                              <p className="text-gray-300">
+                                <span className="font-semibold text-yellow-400">Cost spread:</span> ${Math.round(highest.avgWeeklyCost - lowest.avgWeeklyCost).toLocaleString()}/week difference
+                              </p>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         )}
       </div>
