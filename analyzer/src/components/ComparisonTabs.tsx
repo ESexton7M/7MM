@@ -1098,7 +1098,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
                               at ${Math.round(highest.avgWeeklyCost).toLocaleString()}/week
                             </p>
                             <p className="text-gray-300">
-                              <span className="font-semibold text-blue-400">Most efficient:</span> {lowest.type}{' '}
+                              <span className="font-semibold text-blue-400">Lowest weekly cost:</span> {lowest.type}{' '}
                               at ${Math.round(lowest.avgWeeklyCost).toLocaleString()}/week
                             </p>
                             {efficiencyData.length > 1 && (
