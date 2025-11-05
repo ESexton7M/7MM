@@ -72,16 +72,11 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
            /^7\s*m+/.test(lowerName);
   };
   
-  // Helper function to filter completed projects only (for all tabs except Monthly Timeline)
-  const getCompletedProjectsOnly = (projects: typeof projectDurations) => {
+  // Helper function to filter out non-website project types (for all tabs except Monthly Timeline)
+  const filterWebsiteProjectsOnly = (projects: typeof projectDurations) => {
     const excludedTypes = ['video', 'photography', 'n/a', 'logo', 'branding', 'logo/branding'];
     
     return projects.filter(p => {
-      // Must be completed with valid duration
-      if (!p.completed || p.completed.trim() === '' || p.duration <= 0) {
-        return false;
-      }
-      
       // Filter out non-website project types
       if (p.type) {
         const isExcludedType = excludedTypes.some(excluded => 
@@ -358,7 +353,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
         const cachedProjects = getCachedProjects();
         
         // Filter to only completed projects for section comparison
-        const completedProjects = getCompletedProjectsOnly(projectDurations);
+        const completedProjects = filterWebsiteProjectsOnly(projectDurations);
         
         console.log(`Found ${cachedProjects.length} cached projects`);
         console.log(`Processing ${completedProjects.length} completed projectDurations`);
@@ -665,7 +660,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           }`}
           onClick={() => setActiveTab('projects')}
         >
-          Project Completion
+          Project Overview
         </button>
         
         <div className="relative group">
@@ -771,7 +766,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
         {activeTab === 'projects' && (
           <div className="mt-8">
             <ProjectDurationChart
-              durations={getCompletedProjectsOnly(projectDurations)}
+              durations={filterWebsiteProjectsOnly(projectDurations)}
               highlightedProjects={highlightedProjects}
               onProjectClick={onProjectClick}
             />
@@ -964,8 +959,8 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           <div className="mt-4">
             <h3 className="text-xl font-semibold mb-4">Duration vs Price Analysis</h3>
             {(() => {
-              // Prepare data for scatter plot - only include completed projects with valid price data and filter out internal projects
-              const scatterData = getCompletedProjectsOnly(projectDurations)
+              // Prepare data for scatter plot - only include projects with valid price data and filter out internal projects
+              const scatterData = filterWebsiteProjectsOnly(projectDurations)
                 .filter(p => !isInternalProject(p.name))
                 .filter(p => p.type?.toLowerCase() !== 'internal')
                 .filter(p => typeof p.salePrice === 'number' && p.salePrice > 0)
@@ -1082,8 +1077,8 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           <div className="mt-4">
             <h3 className="text-xl font-semibold mb-4">Website Type Distribution</h3>
             {(() => {
-              // Count website types - filter to completed projects and filter out internal projects
-              const filteredProjects = getCompletedProjectsOnly(projectDurations).filter(p => !isInternalProject(p.name));
+              // Count website types - filter out internal projects
+              const filteredProjects = filterWebsiteProjectsOnly(projectDurations).filter(p => !isInternalProject(p.name));
               const typeCounts = filteredProjects
                 .reduce((acc, p) => {
                   const type = p.type || 'Unknown';
@@ -1164,8 +1159,8 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           <div className="mt-4">
             <h3 className="text-xl font-semibold mb-4">Pricing Efficiency by Website Type</h3>
             {(() => {
-              // Group completed projects by type and calculate average weekly revenue - filter out internal projects
-              const typeData = getCompletedProjectsOnly(projectDurations)
+              // Group projects by type and calculate average weekly revenue - filter out internal projects
+              const typeData = filterWebsiteProjectsOnly(projectDurations)
                 .filter(p => !isInternalProject(p.name))
                 .filter(p => p.type?.toLowerCase() !== 'internal')
                 .filter(p => p.type && p.type !== 'N/A' && p.type !== 'Unknown' && p.weeklyRevenue && p.weeklyRevenue > 0)

@@ -56,6 +56,7 @@ export default function App() {
     const [highlightedProjects, setHighlightedProjects] = useState<string[]>([]);
     const [typeFilter, setTypeFilter] = useState<string>('all');
     const [ecommerceFilter, setEcommerceFilter] = useState<string>('all');
+    const [showCompletedOnly, setShowCompletedOnly] = useState<boolean>(true);
 
     const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
         start: '', // Will be set to a default in useEffect
@@ -96,6 +97,7 @@ export default function App() {
         setTypeFilter('all');
         setEcommerceFilter('all');
         setDateFilterMode('either');
+        setShowCompletedOnly(true);
         
         // Reset to default date range (5 years ago to 1 year future)
         const defaultStart = new Date();
@@ -190,9 +192,14 @@ export default function App() {
                 });
             }
             
+            // Apply completed filter
+            if (showCompletedOnly) {
+                filtered = filtered.filter(project => project.completed && project.completed.trim() !== '');
+            }
+            
             setFilteredDurations(filtered);
         }
-    }, [projectDurations, searchQuery, dateRange, projectSort, typeFilter, ecommerceFilter, dateFilterMode]);
+    }, [projectDurations, searchQuery, dateRange, projectSort, typeFilter, ecommerceFilter, dateFilterMode, showCompletedOnly]);
 
     // Handle highlight updates
     useEffect(() => {
@@ -658,20 +665,29 @@ export default function App() {
                             }
                         } else {
                             // Project is in progress - no completed launch task yet
-                            // Still add it with just the start date (no completion date)
+                            // Calculate duration as from start date to today
                             if (!isNaN(startDate.getTime())) {
+                                const today = new Date();
+                                const duration = Math.round((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
                                 const salePrice = getSalePrice(project);
                                 const ecommerce = getEcommerce(project);
                                 
+                                // Calculate weekly revenue if salePrice is a valid number
+                                let weeklyRevenue: number | undefined;
+                                if (typeof salePrice === 'number' && salePrice > 0 && duration > 0) {
+                                    const durationInWeeks = duration / 7;
+                                    weeklyRevenue = salePrice / durationInWeeks;
+                                }
+                                
                                 durations.push({
                                     name: project.name,
-                                    duration: 0, // In-progress projects have 0 duration for now
+                                    duration, // Duration from start to today
                                     created: startDate.toISOString(),
                                     completed: '', // No completion date yet
                                     type,
                                     salePrice,
                                     ecommerce,
-                                    weeklyRevenue: undefined
+                                    weeklyRevenue
                                 });
                             }
                         }
@@ -1304,6 +1320,19 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
                                     placeholder="Project1, Project2, Project3..."
                                     className="w-full h-10 bg-[#1e1e1e] text-gray-200 rounded-md px-3 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300"
                                 />
+                            </div>
+
+                            {/* Show Completed Only Checkbox */}
+                            <div className="w-full flex items-center">
+                                <label className="flex items-center cursor-pointer space-x-3">
+                                    <input
+                                        type="checkbox"
+                                        checked={showCompletedOnly}
+                                        onChange={(e) => setShowCompletedOnly(e.target.checked)}
+                                        className="w-5 h-5 text-indigo-600 bg-gray-700 border-gray-600 rounded focus:ring-indigo-500 focus:ring-2 cursor-pointer"
+                                    />
+                                    <span className="text-sm font-medium text-gray-300">Show Completed Projects Only</span>
+                                </label>
                             </div>
                         </div>
 

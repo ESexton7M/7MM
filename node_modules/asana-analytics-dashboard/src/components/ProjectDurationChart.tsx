@@ -35,15 +35,20 @@ const ProjectDurationChart: FC<ProjectDurationChartProps & { onProjectClick?: (p
 
   // Memoize the processed durations to avoid recalculating on every render
   const processedDurations = useMemo(() => {
-    return durations.map(duration => ({
-      ...duration,
-      duration: daysToWeeks(duration.duration), // Convert to weeks for display
-      originalDuration: duration.duration, // Keep original for tooltip
-      highlighted: shouldHighlight && 
-        highlightedProjects.some(query => 
-          duration.name.toLowerCase().includes(query.toLowerCase())),
-      isAboveMedian: duration.duration > medianDuration
-    }));
+    return durations.map(duration => {
+      const isCompleted = duration.completed !== null && duration.completed !== undefined && duration.completed.trim() !== '';
+      
+      return {
+        ...duration,
+        duration: daysToWeeks(duration.duration), // Convert to weeks for display
+        originalDuration: duration.duration, // Keep original for tooltip
+        isCompleted, // Track completion status
+        highlighted: shouldHighlight && 
+          highlightedProjects.some(query => 
+            duration.name.toLowerCase().includes(query.toLowerCase())),
+        isAboveMedian: duration.duration > medianDuration
+      };
+    });
   }, [durations, highlightedProjects, shouldHighlight, medianDuration]);
 
   // Custom tooltip component for better formatting and display
@@ -51,6 +56,9 @@ const ProjectDurationChart: FC<ProjectDurationChartProps & { onProjectClick?: (p
     if (!active || !payload || !payload[0]) return null;
 
     const data = payload[0].payload as (typeof processedDurations)[0] & { type?: string; salePrice?: number | string; weeklyRevenue?: number; ecommerce?: string };
+    
+    // Check if project is completed
+    const isCompleted = data.completed !== null && data.completed !== undefined && data.completed !== '';
     
     // Format dates if they exist and are valid
     const formatDate = (dateString: string | null): string => {
@@ -79,8 +87,6 @@ const ProjectDurationChart: FC<ProjectDurationChartProps & { onProjectClick?: (p
     
     // Only show dates section if valid dates are provided
     const startDate = formatDate(data.created);
-    const endDate = formatDate(data.completed);
-    const showDates = startDate !== '' && endDate !== '';
     
     return (
       <div 
@@ -93,12 +99,20 @@ const ProjectDurationChart: FC<ProjectDurationChartProps & { onProjectClick?: (p
         style={{ cursor: onProjectClick ? 'pointer' : 'default' }}
       >
         <p className="text-gray-200 font-bold mb-1">{data.name}</p>
-        <p className="text-gray-300">
-          <span className="text-indigo-400 font-semibold">{formatDurationInWeeks(data.originalDuration || data.duration)}</span> to complete
-        </p>
-        <p className="text-gray-400 text-xs">
-          ({data.originalDuration || data.duration} days)
-        </p>
+        {isCompleted ? (
+          <>
+            <p className="text-gray-300">
+              <span className="text-indigo-400 font-semibold">{formatDurationInWeeks(data.originalDuration || data.duration)}</span> to complete
+            </p>
+            <p className="text-gray-400 text-xs">
+              ({data.originalDuration || data.duration} days)
+            </p>
+          </>
+        ) : (
+          <p className="text-yellow-400 font-semibold">
+            Unfinished
+          </p>
+        )}
         {data.type && (
           <p className="text-gray-300 text-sm mt-1">
             Type: <span className="text-cyan-400">{data.type}</span>
@@ -119,10 +133,10 @@ const ProjectDurationChart: FC<ProjectDurationChartProps & { onProjectClick?: (p
             E-commerce: <span className="text-purple-400">{data.ecommerce === 'Yes' ? 'Yes' : 'No'}</span>
           </p>
         )}
-        {showDates && (
+        {startDate && (
           <div className="text-xs text-gray-400 mt-2">
             <p>Started: {startDate}</p>
-            <p>Completed: {endDate}</p>
+            {isCompleted && <p>Completed: {formatDate(data.completed)}</p>}
           </div>
         )}
         {onProjectClick && (
@@ -144,12 +158,10 @@ const ProjectDurationChart: FC<ProjectDurationChartProps & { onProjectClick?: (p
           <div className="w-4 h-4 rounded" style={{ backgroundColor: '#EF4444' }}></div>
           <span className="text-gray-300">Above Median Duration</span>
         </div>
-        {shouldHighlight && (
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded" style={{ backgroundColor: '#F59E0B' }}></div>
-            <span className="text-gray-300">Highlighted Project</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 rounded" style={{ backgroundColor: '#F59E0B' }}></div>
+          <span className="text-gray-300">Uncompleted / Highlighted</span>
+        </div>
       </div>
       <ResponsiveContainer width="100%" height={300} className="sm:!h-[400px]">
         <BarChart
@@ -198,9 +210,12 @@ const ProjectDurationChart: FC<ProjectDurationChartProps & { onProjectClick?: (p
             style={{ cursor: onProjectClick ? 'pointer' : 'default' }}
           >
             {processedDurations.map((entry, index) => {
-              // Color logic: Orange if highlighted, Red if above median, Blue if at/below median
+              // Color logic: Orange if uncompleted or highlighted, Red if above median, Blue if at/below median
               let fillColor = '#3B82F6'; // Blue (at or below median)
-              if (entry.highlighted) {
+              
+              if (!entry.isCompleted) {
+                fillColor = '#F59E0B'; // Orange for uncompleted projects
+              } else if (entry.highlighted) {
                 fillColor = '#F59E0B'; // Orange for highlighted projects
               } else if (entry.isAboveMedian) {
                 fillColor = '#EF4444'; // Red for above median
