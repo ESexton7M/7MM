@@ -56,8 +56,7 @@ export default function App() {
     const [highlightedProjects, setHighlightedProjects] = useState<string[]>([]);
     const [typeFilter, setTypeFilter] = useState<string>('all');
     const [ecommerceFilter, setEcommerceFilter] = useState<string>('all');
-    const [startQuarter, setStartQuarter] = useState<string>('');
-    const [endQuarter, setEndQuarter] = useState<string>('');
+
     const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
         start: '', // Will be set to a default in useEffect
         end: ''    // Will be set to a default in useEffect
@@ -67,53 +66,7 @@ export default function App() {
     // Ref for scrolling to project select section
     const projectSelectRef = useRef<HTMLDivElement>(null);
 
-    // Helper: Generate quarter options for the last 5 years and next year
-    const generateQuarterOptions = useCallback(() => {
-        const options = [];
-        const currentYear = new Date().getFullYear();
-        const startYear = currentYear - 5;
-        const endYear = currentYear + 1;
-        
-        for (let year = startYear; year <= endYear; year++) {
-            for (let quarter = 1; quarter <= 4; quarter++) {
-                options.push({ value: `Q${quarter} ${year}`, label: `Q${quarter} ${year}` });
-            }
-        }
-        return options.reverse(); // Most recent first
-    }, []);
-
-    // Helper: Convert quarter string to date range
-    const quarterToDateRange = useCallback((quarterStr: string): { start: string; end: string } => {
-        if (!quarterStr) return { start: '', end: '' };
-        
-        const match = quarterStr.match(/Q(\d) (\d{4})/);
-        if (!match || !match[1] || !match[2]) return { start: '', end: '' };
-        
-        const quarter = parseInt(match[1]);
-        const year = parseInt(match[2]);
-        
-        const quarterStartMonth = (quarter - 1) * 3; // 0, 3, 6, 9
-        const quarterEndMonth = quarterStartMonth + 2; // 2, 5, 8, 11
-        
-        const startDate = new Date(year, quarterStartMonth, 1);
-        const endDate = new Date(year, quarterEndMonth + 1, 0); // Last day of quarter
-        
-        return {
-            start: startDate.toISOString().split('T')[0] || '',
-            end: endDate.toISOString().split('T')[0] || ''
-        };
-    }, []);
-
     // Update date range when quarters change
-    useEffect(() => {
-        if (startQuarter || endQuarter) {
-            const start = startQuarter ? quarterToDateRange(startQuarter).start : '';
-            const end = endQuarter ? quarterToDateRange(endQuarter).end : '';
-            setDateRange({ start, end });
-        }
-    }, [startQuarter, endQuarter, quarterToDateRange]);
-
-    // Set default date range on component mount and auto-fetch projects
     useEffect(() => {
         // Default start date to 5 years ago
         const defaultStart = new Date();
@@ -1108,30 +1061,22 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
                                     />
                                 </div>
 
-                                {/* Quarter Range */}
+                                {/* Date Range */}
                                 <div className="w-full">
-                                    <label className="block text-sm font-medium text-gray-300 mb-2">Quarter Range</label>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">Date Range</label>
                                     <div className="grid grid-cols-2 gap-x-2">
-                                        <select
-                                            value={startQuarter}
-                                            onChange={(e) => setStartQuarter(e.target.value)}
+                                        <input
+                                            type="date"
+                                            value={dateRange.start}
+                                            onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
                                             className="w-full h-10 bg-[#1e1e1e] text-gray-200 rounded-md px-3 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300"
-                                        >
-                                            <option value="">Start Quarter</option>
-                                            {generateQuarterOptions().map(option => (
-                                                <option key={option.value} value={option.value}>{option.label}</option>
-                                            ))}
-                                        </select>
-                                        <select
-                                            value={endQuarter}
-                                            onChange={(e) => setEndQuarter(e.target.value)}
+                                        />
+                                        <input
+                                            type="date"
+                                            value={dateRange.end}
+                                            onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
                                             className="w-full h-10 bg-[#1e1e1e] text-gray-200 rounded-md px-3 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300"
-                                        >
-                                            <option value="">End Quarter</option>
-                                            {generateQuarterOptions().map(option => (
-                                                <option key={option.value} value={option.value}>{option.label}</option>
-                                            ))}
-                                        </select>
+                                        />
                                     </div>
                                 </div>
 
