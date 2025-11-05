@@ -71,6 +71,30 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
            // Also check if the project starts with these patterns
            /^7\s*m+/.test(lowerName);
   };
+  
+  // Helper function to filter completed projects only (for all tabs except Monthly Timeline)
+  const getCompletedProjectsOnly = (projects: typeof projectDurations) => {
+    const excludedTypes = ['video', 'photography', 'n/a', 'logo', 'branding', 'logo/branding'];
+    
+    return projects.filter(p => {
+      // Must be completed with valid duration
+      if (!p.completed || p.completed.trim() === '' || p.duration <= 0) {
+        return false;
+      }
+      
+      // Filter out non-website project types
+      if (p.type) {
+        const isExcludedType = excludedTypes.some(excluded => 
+          p.type!.toLowerCase().includes(excluded)
+        );
+        if (isExcludedType) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+  };
 
   // Fetch the assignment date from a task's history stories
   const fetchTaskAssignmentDate = async (taskGid: string, taskName: string): Promise<Date | null> => {
@@ -333,8 +357,11 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
         const { getCachedProjects, getCachedProjectTasks } = await import('../utils/asanaCache');
         const cachedProjects = getCachedProjects();
         
+        // Filter to only completed projects for section comparison
+        const completedProjects = getCompletedProjectsOnly(projectDurations);
+        
         console.log(`Found ${cachedProjects.length} cached projects`);
-        console.log(`Processing ${projectDurations.length} projectDurations`);
+        console.log(`Processing ${completedProjects.length} completed projectDurations`);
         
         const sectionData: Record<string, { 
           projectName: string; 
@@ -344,7 +371,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
         }> = {};
         
         // Process each project to get section-specific durations
-        for (const project of projectDurations) {
+        for (const project of completedProjects) {
           console.log(`\n=== Processing project: "${project.name}" for section "${selectedSection}" ===`);
           
           // Find project GID
@@ -744,7 +771,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
         {activeTab === 'projects' && (
           <div className="mt-8">
             <ProjectDurationChart
-              durations={projectDurations}
+              durations={getCompletedProjectsOnly(projectDurations)}
               highlightedProjects={highlightedProjects}
               onProjectClick={onProjectClick}
             />
@@ -937,8 +964,8 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           <div className="mt-4">
             <h3 className="text-xl font-semibold mb-4">Duration vs Price Analysis</h3>
             {(() => {
-              // Prepare data for scatter plot - only include projects with valid price data and filter out internal projects
-              const scatterData = projectDurations
+              // Prepare data for scatter plot - only include completed projects with valid price data and filter out internal projects
+              const scatterData = getCompletedProjectsOnly(projectDurations)
                 .filter(p => !isInternalProject(p.name))
                 .filter(p => p.type?.toLowerCase() !== 'internal')
                 .filter(p => typeof p.salePrice === 'number' && p.salePrice > 0)
@@ -1055,8 +1082,8 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           <div className="mt-4">
             <h3 className="text-xl font-semibold mb-4">Website Type Distribution</h3>
             {(() => {
-              // Count website types - filter out internal projects
-              const filteredProjects = projectDurations.filter(p => !isInternalProject(p.name));
+              // Count website types - filter to completed projects and filter out internal projects
+              const filteredProjects = getCompletedProjectsOnly(projectDurations).filter(p => !isInternalProject(p.name));
               const typeCounts = filteredProjects
                 .reduce((acc, p) => {
                   const type = p.type || 'Unknown';
@@ -1137,8 +1164,8 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           <div className="mt-4">
             <h3 className="text-xl font-semibold mb-4">Pricing Efficiency by Website Type</h3>
             {(() => {
-              // Group projects by type and calculate average weekly revenue - filter out internal projects
-              const typeData = projectDurations
+              // Group completed projects by type and calculate average weekly revenue - filter out internal projects
+              const typeData = getCompletedProjectsOnly(projectDurations)
                 .filter(p => !isInternalProject(p.name))
                 .filter(p => p.type?.toLowerCase() !== 'internal')
                 .filter(p => p.type && p.type !== 'N/A' && p.type !== 'Unknown' && p.weeklyRevenue && p.weeklyRevenue > 0)

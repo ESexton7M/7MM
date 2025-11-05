@@ -33,6 +33,7 @@ export interface Stats {
   completedTasks: number;
   pendingTasks: number;
   avgCompletionTimeDays: number;
+  totalCompletionTimeDays: number;
 }
 
 // Data for dashboard display

@@ -345,8 +345,18 @@ export default function App() {
         const today = new Date();
         const oneWeekAgo = new Date();
         oneWeekAgo.setDate(today.getDate() - 7);
+        
+        let earliestCreatedDate: Date | null = null;
+        let latestCompletedDate: Date | null = null;
+        
         tasks.forEach((task: Task) => {
             const createdAt = new Date(task.created_at);
+            
+            // Track earliest created date
+            if (!earliestCreatedDate || createdAt < earliestCreatedDate) {
+                earliestCreatedDate = createdAt;
+            }
+            
             const createdDay = createdAt.getDay();
             if (createdDay >= 0 && createdDay < tasksCreatedByDay.length && createdAt > oneWeekAgo) {
                 if (tasksCreatedByDay[createdDay]) tasksCreatedByDay[createdDay].created++;
@@ -354,6 +364,12 @@ export default function App() {
             if (task.completed && task.completed_at) {
                 completedCount++;
                 const completedAt = new Date(task.completed_at);
+                
+                // Track latest completed date
+                if (!latestCompletedDate || completedAt > latestCompletedDate) {
+                    latestCompletedDate = completedAt;
+                }
+                
                 const completedDay = completedAt.getDay();
                 if (completedDay >= 0 && completedDay < tasksCompletedByDay.length && completedAt > oneWeekAgo) {
                     if (tasksCompletedByDay[completedDay]) tasksCompletedByDay[completedDay].completed++;
@@ -362,6 +378,14 @@ export default function App() {
                 completionTimes.push(timeDiff / (1000 * 3600 * 24)); // in days
             }
         });
+        
+        // Calculate project duration (from start to completion)
+        let projectDurationDays = 0;
+        if (earliestCreatedDate && latestCompletedDate) {
+            const durationMs = (latestCompletedDate as Date).getTime() - (earliestCreatedDate as Date).getTime();
+            projectDurationDays = Math.round(durationMs / (1000 * 3600 * 24));
+        }
+        
         const totalCompletionTime = completionTimes.reduce((acc, time) => acc + time, 0);
         const avgCompletionTimeDays = completionTimes.length > 0
             ? Math.round(totalCompletionTime / completionTimes.length)
@@ -370,7 +394,8 @@ export default function App() {
             totalTasks: tasks.length,
             completedTasks: completedCount,
             pendingTasks: tasks.length - completedCount,
-            avgCompletionTimeDays
+            avgCompletionTimeDays,
+            totalCompletionTimeDays: projectDurationDays
         };
         const taskTableData = tasks.map((task: Task) => ({
             ...task,
@@ -417,9 +442,8 @@ export default function App() {
             const cachedAnalyzedData = await getCachedAnalyzedData();
             if (await isCacheValid() && cachedAnalyzedData && cachedAnalyzedData.length > 0) {
                 console.log('Using cached analyzed data');
-                // Filter out 0-day projects from cached data and sort based on current sort preference
-                const filtered = cachedAnalyzedData.filter(project => project.duration > 0);
-                const sorted = [...filtered];
+                // Keep all projects including in-progress ones (duration: 0)
+                const sorted = [...cachedAnalyzedData];
                 sortProjectDurations(sorted, projectSort);
                 setProjectDurations(sorted);
                 setAnalyzing(false);
@@ -532,16 +556,21 @@ export default function App() {
                            );
                 });
                 
-                // Only include projects that have a completed launch task
-                if (launchTask) {
+                // Get the earliest creation date of any task in the project
+                const creationDates = tasks
+                    .filter((t: Task) => t.created_at && !isNaN(new Date(t.created_at).getTime()))
+                    .map((t: Task) => new Date(t.created_at));
+                
+                if (creationDates.length > 0) {
                     try {
-                        // Get the earliest creation date of any task in the project
-                        const creationDates = tasks
-                            .filter((t: Task) => t.created_at && !isNaN(new Date(t.created_at).getTime()))
-                            .map((t: Task) => new Date(t.created_at));
+                        const startDate = new Date(Math.min(...creationDates.map(d => d.getTime())));
                         
-                        if (creationDates.length > 0) {
-                            const startDate = new Date(Math.min(...creationDates.map(d => d.getTime())));
+                        // Extract type
+                        const type = getWebsiteType(project);
+                        
+                        // Include project if it has a completed launch task OR if it's in progress
+                        if (launchTask) {
+                            // Project is completed - has a launch task
                             const endDate = new Date(launchTask.completed_at || '');
                             
                             // Ensure dates are valid and duration is positive
@@ -549,8 +578,6 @@ export default function App() {
                                 const duration = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
                                 
                                 if (duration > 0) { // Exclude projects completed in 0 days
-                                    // Extract type, sale price, and ecommerce from project custom fields
-                                    const type = getWebsiteType(project);
                                     const salePrice = getSalePrice(project);
                                     const ecommerce = getEcommerce(project);
                                     
@@ -572,6 +599,24 @@ export default function App() {
                                         weeklyRevenue
                                     });
                                 }
+                            }
+                        } else {
+                            // Project is in progress - no completed launch task yet
+                            // Still add it with just the start date (no completion date)
+                            if (!isNaN(startDate.getTime())) {
+                                const salePrice = getSalePrice(project);
+                                const ecommerce = getEcommerce(project);
+                                
+                                durations.push({
+                                    name: project.name,
+                                    duration: 0, // In-progress projects have 0 duration for now
+                                    created: startDate.toISOString(),
+                                    completed: '', // No completion date yet
+                                    type,
+                                    salePrice,
+                                    ecommerce,
+                                    weeklyRevenue: undefined
+                                });
                             }
                         }
                     } catch (error) {

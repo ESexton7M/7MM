@@ -56,8 +56,8 @@ const DashboardView: FC<DashboardViewProps> = ({ projectData }) => {
           <p className="stat-value text-yellow-400 text-lg sm:text-xl md:text-2xl">{stats.pendingTasks}</p>
         </div>
         <div className="stat-card">
-          <h3 className="stat-title text-xs sm:text-sm">Avg. Completion</h3>
-          <p className="stat-value text-lg sm:text-xl md:text-2xl">{stats.avgCompletionTimeDays} days</p>
+          <h3 className="stat-title text-xs sm:text-sm">Total Time to Completion</h3>
+          <p className="stat-value text-lg sm:text-xl md:text-2xl">{stats.totalCompletionTimeDays} days</p>
         </div>
       </div>
 
