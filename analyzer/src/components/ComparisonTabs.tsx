@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import type { ProjectDuration, Task } from '../types';
 import ProjectDurationChart from './ProjectDurationChart';
+import MonthlyTimelineView from './MonthlyTimelineView';
 import { getSectionCategoryColor } from '../config/sectionPhases';
 import { 
   daysToWeeks, 
@@ -38,12 +39,21 @@ interface ComparisonTabsProps {
   highlightedProjects: string[];
   sortMethod: string;
   onProjectClick?: (projectName: string) => void;
+  token?: string; // Asana API token
+  apiBase?: string; // Asana API base URL
 }
 
 type ComparisonMode = 'projects' | 'sections';
 type TabId = ComparisonMode | string;
 
-const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highlightedProjects, sortMethod, onProjectClick }) => {
+const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ 
+  projectDurations, 
+  highlightedProjects, 
+  sortMethod, 
+  onProjectClick,
+  token,
+  apiBase = 'https://app.asana.com/api/1.0'
+}) => {
   const [activeTab, setActiveTab] = useState<TabId>('projects');
   // Start with the first required section as the default
   const [selectedSection, setSelectedSection] = useState<string>(REQUIRED_SECTIONS[0] || '');
@@ -60,6 +70,76 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
            lowerName.includes('7mc') ||
            // Also check if the project starts with these patterns
            /^7\s*m+/.test(lowerName);
+  };
+
+  // Fetch the assignment date from a task's history stories
+  const fetchTaskAssignmentDate = async (taskGid: string, taskName: string): Promise<Date | null> => {
+    if (!token || !apiBase) {
+      console.warn(`Cannot fetch assignment date for task ${taskName}: missing token or apiBase`);
+      return null;
+    }
+
+    try {
+      console.log(`Fetching stories for task "${taskName}" (GID: ${taskGid})...`);
+      const storiesResponse = await fetch(
+        `${apiBase}/tasks/${taskGid}/stories?opt_fields=created_at,resource_type,resource_subtype,text,source`,
+        {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+
+      if (!storiesResponse.ok) {
+        console.warn(`Failed to fetch stories for task ${taskName}: ${storiesResponse.statusText}`);
+        return null;
+      }
+
+      const storiesData = await storiesResponse.json();
+      console.log(`Retrieved ${storiesData.data.length} stories for task "${taskName}"`);
+      
+      // Log all stories to see what we're working with
+      storiesData.data.forEach((story: any, index: number) => {
+        console.log(`Story ${index + 1}:`, {
+          type: story.resource_type,
+          subtype: story.resource_subtype,
+          text: story.text,
+          created_at: story.created_at
+        });
+      });
+      
+      // Find the first assignment story - look for various patterns
+      const assignmentStory = storiesData.data.find((story: any) => {
+        // Check resource_subtype first
+        if (story.resource_subtype === 'assigned') {
+          console.log(`Found assignment via resource_subtype for "${taskName}"`);
+          return true;
+        }
+        
+        // Check text content
+        if (story.text) {
+          const text = story.text.toLowerCase();
+          if (text.includes('assigned to') || 
+              text.includes('assigned this task') ||
+              text.includes('assigned the task') ||
+              text.match(/assigned.*to/)) {
+            console.log(`Found assignment via text pattern for "${taskName}": ${story.text}`);
+            return true;
+          }
+        }
+        
+        return false;
+      });
+
+      if (assignmentStory && assignmentStory.created_at) {
+        console.log(`✓ Found assignment date for task "${taskName}": ${assignmentStory.created_at}`);
+        return new Date(assignmentStory.created_at);
+      } else {
+        console.warn(`✗ No assignment story found for task "${taskName}" among ${storiesData.data.length} stories`);
+        return null;
+      }
+    } catch (error) {
+      console.error(`Error fetching stories for task ${taskName}:`, error);
+      return null;
+    }
   };
 
   // Helper function to sort section comparison data
@@ -96,7 +176,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
 
   // State to hold section-specific data
   const [projectSectionData, setProjectSectionData] = useState<
-    Record<string, { projectName: string; sectionDuration: number; completed: string }>
+    Record<string, { projectName: string; sectionDuration: number; completed: string; assignedDate?: string }>
   >({});
 
   // We're using predefined sections, but we still need to preload section data
@@ -238,22 +318,35 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
 
   // Generate section durations when a section is selected
   useEffect(() => {
+    console.log(`🔥 ComparisonTabs useEffect triggered - activeTab: ${activeTab}, selectedSection: ${selectedSection}`);
+    
     // Skip if not in section comparison mode
-    if (activeTab !== 'sections' && !activeTab.startsWith('section-')) return;
+    if (activeTab !== 'sections' && !activeTab.startsWith('section-')) {
+      console.log('Skipping section data fetch - not in section comparison mode');
+      return;
+    }
+    
+    console.log('Starting fetchSectionData...');
     
     const fetchSectionData = async () => {
       try {
         const { getCachedProjects, getCachedProjectTasks } = await import('../utils/asanaCache');
         const cachedProjects = getCachedProjects();
         
+        console.log(`Found ${cachedProjects.length} cached projects`);
+        console.log(`Processing ${projectDurations.length} projectDurations`);
+        
         const sectionData: Record<string, { 
           projectName: string; 
           sectionDuration: number; 
-          completed: string 
+          completed: string;
+          assignedDate?: string;
         }> = {};
         
         // Process each project to get section-specific durations
         for (const project of projectDurations) {
+          console.log(`\n=== Processing project: "${project.name}" for section "${selectedSection}" ===`);
+          
           // Find project GID
           let projectGid = project.gid;
           if (!projectGid) {
@@ -369,25 +462,67 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
           const firstTaskDate = new Date(firstTask.created_at);
           const lastTaskDate = new Date(lastTask.completed_at);
           
+          // Fetch assignment date from the first task's history
+          let assignedDate: Date | undefined = undefined;
+          console.log(`DEBUG: Checking first task for "${project.name}" - GID exists: ${!!firstTask.gid}, token exists: ${!!token}, apiBase exists: ${!!apiBase}`);
+          
+          if (firstTask.gid && token && apiBase) {
+            console.log(`Fetching assignment date for "${project.name}" - Section "${selectedSection}"`);
+            console.log(`First task: "${firstTask.name}" (GID: ${firstTask.gid})`);
+            
+            // Try to get assignment date from first task
+            let tempAssignedDate = await fetchTaskAssignmentDate(firstTask.gid, firstTask.name || 'unknown');
+            
+            // If not found, try subsequent tasks until we find one
+            if (!tempAssignedDate && sortedByCreation.length > 1) {
+              console.log(`No assignment date for first task, trying up to ${Math.min(5, sortedByCreation.length)} more tasks...`);
+              for (let i = 1; i < Math.min(5, sortedByCreation.length); i++) {
+                const nextTask = sortedByCreation[i];
+                if (nextTask && nextTask.gid) {
+                  console.log(`Trying task ${i + 1}: "${nextTask.name}"`);
+                  tempAssignedDate = await fetchTaskAssignmentDate(nextTask.gid, nextTask.name || 'unknown');
+                  if (tempAssignedDate) {
+                    console.log(`✓ Found assignment date from task ${i + 1}: ${tempAssignedDate.toISOString()}`);
+                    break;
+                  }
+                }
+              }
+            }
+            
+            if (tempAssignedDate) {
+              assignedDate = tempAssignedDate;
+              console.log(`✓ Using assignment date: ${assignedDate.toISOString()} for "${project.name}" - "${selectedSection}"`);
+            } else {
+              console.warn(`✗ No assignment date found for "${project.name}" - "${selectedSection}" after checking ${Math.min(5, sortedByCreation.length)} tasks`);
+            }
+          }
+          
           // Print task details for debugging (especially for Field of Dreams)
           if (project.name.includes('Field of Dreams')) {
             console.log(`FIELD OF DREAMS - Section ${selectedSection}:`);
             console.log(`First task: "${firstTask.name}" created on ${firstTaskDate.toISOString().slice(0, 10)}`);
             console.log(`Last task: "${lastTask.name}" completed on ${lastTaskDate.toISOString().slice(0, 10)}`);
+            if (assignedDate) {
+              console.log(`Assignment date found: ${assignedDate.toISOString().slice(0, 10)}`);
+            }
           }
           
-          const firstTaskTime = firstTaskDate.getTime();
+          // Use assignment date for duration calculation if available, otherwise fall back to created date
+          const startTime = assignedDate ? assignedDate.getTime() : firstTaskDate.getTime();
           const lastTaskTime = lastTaskDate.getTime();
           
-          // Calculate duration in days
-          const durationMs = lastTaskTime - firstTaskTime;
+          // Calculate duration in days from assignment (or creation) to completion
+          const durationMs = lastTaskTime - startTime;
           const durationDays = Math.max(0, Math.round(durationMs / (1000 * 60 * 60 * 24)));
+          
+          console.log(`Section "${selectedSection}" in "${project.name}": Duration = ${durationDays} days (${daysToWeeks(durationDays)} weeks)`);
           
           // Store real section data
           sectionData[project.name] = {
             projectName: project.name,
             sectionDuration: durationDays,
-            completed: new Date(lastTaskTime).toISOString()
+            completed: new Date(lastTaskTime).toISOString(),
+            assignedDate: assignedDate ? assignedDate.toISOString() : undefined
           };
         }
         
@@ -419,12 +554,14 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
         const sectionData = projectSectionData[project.name];
         const durationInDays = sectionData ? sectionData.sectionDuration : project.duration;
         const completedDate = sectionData ? sectionData.completed : project.completed;
+        const assignedDate = sectionData?.assignedDate;
         
         return {
           name: project.name,
           duration: daysToWeeks(durationInDays), // Convert to weeks for chart display
           originalDuration: durationInDays, // Keep original days for tooltip
           completed: completedDate,
+          assignedDate: assignedDate,
           highlighted: isHighlighted,
           section: sectionToCompare
         };
@@ -441,20 +578,50 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
     
     const data = payload[0].payload;
     
+    // Debug logging
+    console.log('Tooltip data:', {
+      name: data.name,
+      section: data.section,
+      assignedDate: data.assignedDate,
+      completed: data.completed,
+      duration: data.duration,
+      originalDuration: data.originalDuration
+    });
+    
+    const assignedDateStr = data.assignedDate 
+      ? new Date(data.assignedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      : null;
+    const completedDateStr = data.completed
+      ? new Date(data.completed).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      : null;
+    
     return (
       <div className="bg-gray-800 p-3 border border-gray-700 rounded-lg shadow-lg">
         <p className="text-gray-200 font-bold mb-1">{data.name}</p>
-        <p className="text-gray-300">
-          <span className="text-indigo-400 font-semibold">{formatDurationInWeeks(data.originalDuration || data.duration * 7)}</span> for {data.section}
-        </p>
-        <p className="text-gray-400 text-xs">
-          ({data.originalDuration || Math.round(data.duration * 7)} days)
-        </p>
-        {data.completed && (
-          <p className="text-gray-400 text-sm mt-1">
-            Completed: {new Date(data.completed).toLocaleDateString()}
+        <p className="text-cyan-400 text-sm mb-2">{data.section}</p>
+        
+        {assignedDateStr ? (
+          <p className="text-gray-300 mb-1">
+            Assigned: <span className="text-green-400">{assignedDateStr}</span>
+          </p>
+        ) : (
+          <p className="text-orange-400 text-sm mb-1">
+            No assignment date found
           </p>
         )}
+        
+        {completedDateStr && (
+          <p className="text-gray-300 mb-2">
+            Completed: <span className="text-blue-400">{completedDateStr}</span>
+          </p>
+        )}
+        
+        <p className="text-gray-300 mt-2">
+          <span className="text-indigo-400 font-semibold">{formatDurationInWeeks(data.originalDuration || data.duration * 7)}</span>
+        </p>
+        <p className="text-gray-400 text-xs mt-1">
+          ({data.originalDuration || Math.round(data.duration * 7)} days)
+        </p>
       </div>
     );
   };
@@ -558,6 +725,17 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
           onClick={() => setActiveTab('pricing-efficiency')}
         >
           Pricing Efficiency
+        </button>
+
+        <button
+          className={`py-2 px-3 sm:px-4 font-medium text-sm sm:text-base ${
+            activeTab === 'monthly-timeline'
+              ? 'text-blue-400 border-b-2 border-blue-400'
+              : 'text-gray-400 hover:text-gray-300'
+          }`}
+          onClick={() => setActiveTab('monthly-timeline')}
+        >
+          Monthly Timeline
         </button>
       </div>
 
@@ -1114,6 +1292,16 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
                 </>
               );
             })()}
+          </div>
+        )}
+
+        {/* Monthly Timeline Tab */}
+        {activeTab === 'monthly-timeline' && (
+          <div className="mt-4">
+            <MonthlyTimelineView
+              projectDurations={projectDurations}
+              highlightedProjects={highlightedProjects}
+            />
           </div>
         )}
       </div>
