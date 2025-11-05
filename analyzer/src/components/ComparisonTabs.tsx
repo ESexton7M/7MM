@@ -535,7 +535,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
           }`}
           onClick={() => setActiveTab('cost-analysis')}
         >
-          Cost Analysis
+          Revenue Analysis
         </button>
 
         <button
@@ -754,7 +754,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
           </div>
         )}
 
-        {/* Cost Analysis Tab */}
+        {/* Revenue Analysis Tab */}
         {activeTab === 'cost-analysis' && (
           <div className="mt-4">
             <h3 className="text-xl font-semibold mb-4">Duration vs Price Analysis</h3>
@@ -768,7 +768,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
                   name: p.name,
                   duration: daysToWeeks(p.duration),
                   price: p.salePrice as number,
-                  weeklyCost: p.weeklyCost || 0,
+                  weeklyRevenue: p.weeklyRevenue || 0,
                   type: p.type || 'Unknown'
                 }));
 
@@ -789,7 +789,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
                     <p className="text-gray-200 font-bold mb-1">{data.name}</p>
                     <p className="text-gray-300 text-sm">Duration: <span className="text-indigo-400">{data.duration.toFixed(1)} weeks</span></p>
                     <p className="text-gray-300 text-sm">Price: <span className="text-green-400">${data.price.toLocaleString()}</span></p>
-                    <p className="text-gray-300 text-sm">Weekly Cost: <span className="text-yellow-400 font-semibold">${Math.round(data.weeklyCost).toLocaleString()}/week</span></p>
+                    <p className="text-gray-300 text-sm">Weekly Revenue: <span className="text-yellow-400 font-semibold">${Math.round(data.weeklyRevenue).toLocaleString()}/week</span></p>
                     <p className="text-gray-300 text-sm">Type: <span className="text-cyan-400">{data.type}</span></p>
                   </div>
                 );
@@ -816,37 +816,37 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
                         stroke="#A0AEC0"
                         label={{ value: 'Price ($)', angle: -90, position: 'left', offset: 0, fill: '#E2E8F0', style: { textAnchor: 'middle' } }}
                       />
-                      <ZAxis type="number" dataKey="weeklyCost" range={[50, 400]} name="Weekly Cost" />
+                      <ZAxis type="number" dataKey="weeklyRevenue" range={[50, 400]} name="Weekly Revenue" />
                       <Tooltip content={<ScatterTooltip />} />
                       <Scatter name="Projects" data={scatterData} fill="#818CF8" />
                     </ScatterChart>
                   </ResponsiveContainer>
 
-                  {/* Cost Analysis Statistics */}
+                  {/* Revenue Analysis Statistics */}
                   <div className="mt-6 pt-6 border-t border-gray-700">
-                    <h4 className="text-lg font-semibold mb-4">Cost Statistics</h4>
+                    <h4 className="text-lg font-semibold mb-4">Revenue Statistics</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                       {(() => {
-                        const weeklyCosts = scatterData.filter(d => d.weeklyCost > 0).map(d => d.weeklyCost);
+                        const weeklyRevenues = scatterData.filter(d => d.weeklyRevenue > 0).map(d => d.weeklyRevenue);
                         const prices = scatterData.map(d => d.price);
                         
-                        if (weeklyCosts.length === 0) return null;
+                        if (weeklyRevenues.length === 0) return null;
                         
-                        const costStats = calculateStatistics(weeklyCosts);
+                        const revenueStats = calculateStatistics(weeklyRevenues);
                         const priceStats = calculateStatistics(prices);
 
                         return (
                           <>
                             <div className="bg-gray-800 p-4 rounded-md">
-                              <p className="text-sm text-gray-400">Avg Weekly Cost</p>
+                              <p className="text-sm text-gray-400">Avg Weekly Revenue</p>
                               <p className="text-2xl font-bold text-yellow-400">
-                                ${Math.round(costStats.mean).toLocaleString()}/week
+                                ${Math.round(revenueStats.mean).toLocaleString()}/week
                               </p>
                             </div>
                             <div className="bg-gray-800 p-4 rounded-md">
-                              <p className="text-sm text-gray-400">Median Weekly Cost</p>
+                              <p className="text-sm text-gray-400">Median Weekly Revenue</p>
                               <p className="text-2xl font-bold text-yellow-400">
-                                ${Math.round(costStats.median).toLocaleString()}/week
+                                ${Math.round(revenueStats.median).toLocaleString()}/week
                               </p>
                             </div>
                             <div className="bg-gray-800 p-4 rounded-md">
@@ -959,17 +959,17 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
           <div className="mt-4">
             <h3 className="text-xl font-semibold mb-4">Pricing Efficiency by Website Type</h3>
             {(() => {
-              // Group projects by type and calculate average weekly cost - filter out internal projects
+              // Group projects by type and calculate average weekly revenue - filter out internal projects
               const typeData = projectDurations
                 .filter(p => !isInternalProject(p.name))
                 .filter(p => p.type?.toLowerCase() !== 'internal')
-                .filter(p => p.type && p.type !== 'N/A' && p.type !== 'Unknown' && p.weeklyCost && p.weeklyCost > 0)
+                .filter(p => p.type && p.type !== 'N/A' && p.type !== 'Unknown' && p.weeklyRevenue && p.weeklyRevenue > 0)
                 .reduce((acc, p) => {
                   const type = p.type!;
                   if (!acc[type]) {
                     acc[type] = { total: 0, count: 0, projects: [] };
                   }
-                  acc[type].total += p.weeklyCost!;
+                  acc[type].total += p.weeklyRevenue!;
                   acc[type].count += 1;
                   acc[type].projects.push(p);
                   return acc;
@@ -977,10 +977,10 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
 
               const efficiencyData = Object.entries(typeData).map(([type, data]) => ({
                 type,
-                avgWeeklyCost: data.total / data.count,
+                avgWeeklyRevenue: data.total / data.count,
                 projectCount: data.count,
                 projects: data.projects
-              })).sort((a, b) => b.avgWeeklyCost - a.avgWeeklyCost);
+              })).sort((a, b) => b.avgWeeklyRevenue - a.avgWeeklyRevenue);
 
               if (efficiencyData.length === 0) {
                 return (
@@ -1010,7 +1010,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
                         domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.1)]}
                         tickFormatter={(value) => `$${Math.round(value)}`}
                         label={{ 
-                          value: 'Avg Weekly Cost ($)', 
+                          value: 'Avg Weekly Revenue ($)', 
                           angle: -90, 
                           position: 'left',
                           offset: 0,
@@ -1026,8 +1026,8 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
                             <div className="bg-gray-800 p-3 border border-gray-700 rounded-lg shadow-lg">
                               <p className="text-gray-200 font-bold mb-1">{data.type}</p>
                               <p className="text-gray-300 text-sm">
-                                Avg Weekly Cost: <span className="text-yellow-400 font-semibold">
-                                  ${Math.round(data.avgWeeklyCost).toLocaleString()}/week
+                                Avg Weekly Revenue: <span className="text-yellow-400 font-semibold">
+                                  ${Math.round(data.avgWeeklyRevenue).toLocaleString()}/week
                                 </span>
                               </p>
                               <p className="text-gray-400 text-xs">{data.projectCount} projects</p>
@@ -1035,7 +1035,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
                           );
                         }}
                       />
-                      <Bar dataKey="avgWeeklyCost" fill="#F59E0B" />
+                      <Bar dataKey="avgWeeklyRevenue" fill="#F59E0B" />
                     </BarChart>
                   </ResponsiveContainer>
 
@@ -1054,9 +1054,9 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
                             <h5 className="text-lg font-semibold mb-3 text-cyan-400">{item.type}</h5>
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
                               <div>
-                                <p className="text-gray-400">Avg Weekly Cost</p>
+                                <p className="text-gray-400">Avg Weekly Revenue</p>
                                 <p className="text-xl font-bold text-yellow-400">
-                                  ${Math.round(item.avgWeeklyCost).toLocaleString()}
+                                  ${Math.round(item.avgWeeklyRevenue).toLocaleString()}
                                 </p>
                               </div>
                               <div>
@@ -1094,16 +1094,16 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({ projectDurations, highl
                         return (
                           <>
                             <p className="text-gray-300">
-                              <span className="font-semibold text-green-400">Highest weekly cost:</span> {highest.type}{' '}
-                              at ${Math.round(highest.avgWeeklyCost).toLocaleString()}/week
+                              <span className="font-semibold text-green-400">Highest weekly revenue:</span> {highest.type}{' '}
+                              at ${Math.round(highest.avgWeeklyRevenue).toLocaleString()}/week
                             </p>
                             <p className="text-gray-300">
-                              <span className="font-semibold text-blue-400">Lowest weekly cost:</span> {lowest.type}{' '}
-                              at ${Math.round(lowest.avgWeeklyCost).toLocaleString()}/week
+                              <span className="font-semibold text-blue-400">Lowest weekly revenue:</span> {lowest.type}{' '}
+                              at ${Math.round(lowest.avgWeeklyRevenue).toLocaleString()}/week
                             </p>
                             {efficiencyData.length > 1 && (
                               <p className="text-gray-300">
-                                <span className="font-semibold text-yellow-400">Cost spread:</span> ${Math.round(highest.avgWeeklyCost - lowest.avgWeeklyCost).toLocaleString()}/week difference
+                                <span className="font-semibold text-yellow-400">Revenue spread:</span> ${Math.round(highest.avgWeeklyRevenue - lowest.avgWeeklyRevenue).toLocaleString()}/week difference
                               </p>
                             )}
                           </>

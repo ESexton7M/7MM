@@ -601,11 +601,11 @@ export default function App() {
                                     const salePrice = getSalePrice(project);
                                     const ecommerce = getEcommerce(project);
                                     
-                                    // Calculate weekly cost if salePrice is a valid number
-                                    let weeklyCost: number | undefined;
+                                    // Calculate weekly revenue if salePrice is a valid number
+                                    let weeklyRevenue: number | undefined;
                                     if (typeof salePrice === 'number' && salePrice > 0 && duration > 0) {
                                         const durationInWeeks = duration / 7;
-                                        weeklyCost = salePrice / durationInWeeks;
+                                        weeklyRevenue = salePrice / durationInWeeks;
                                     }
                                     
                                     durations.push({
@@ -616,7 +616,7 @@ export default function App() {
                                         type,
                                         salePrice,
                                         ecommerce,
-                                        weeklyCost
+                                        weeklyRevenue
                                     });
                                 }
                             }

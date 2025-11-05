@@ -50,7 +50,7 @@ const ProjectDurationChart: FC<ProjectDurationChartProps & { onProjectClick?: (p
   const CustomTooltip: FC<{ active?: boolean; payload?: Array<{ payload: Record<string, unknown> }> }> = ({ active, payload }) => {
     if (!active || !payload || !payload[0]) return null;
 
-    const data = payload[0].payload as (typeof processedDurations)[0] & { type?: string; salePrice?: number | string; weeklyCost?: number; ecommerce?: string };
+    const data = payload[0].payload as (typeof processedDurations)[0] & { type?: string; salePrice?: number | string; weeklyRevenue?: number; ecommerce?: string };
     
     // Format dates if they exist and are valid
     const formatDate = (dateString: string | null): string => {
@@ -71,10 +71,10 @@ const ProjectDurationChart: FC<ProjectDurationChartProps & { onProjectClick?: (p
       return String(price);
     };
     
-    // Format weekly cost
-    const formatWeeklyCost = (cost: number | undefined): string => {
-      if (cost === undefined) return 'N/A';
-      return `$${Math.round(cost).toLocaleString()}/week`;
+    // Format weekly revenue
+    const formatWeeklyRevenue = (revenue: number | undefined): string => {
+      if (revenue === undefined) return 'N/A';
+      return `$${Math.round(revenue).toLocaleString()}/week`;
     };
     
     // Only show dates section if valid dates are provided
@@ -109,9 +109,9 @@ const ProjectDurationChart: FC<ProjectDurationChartProps & { onProjectClick?: (p
             Sale Price: <span className="text-green-400">{formatPrice(data.salePrice)}</span>
           </p>
         )}
-        {data.weeklyCost !== undefined && (
+        {data.weeklyRevenue !== undefined && (
           <p className="text-gray-300 text-sm">
-            Weekly Cost: <span className="text-yellow-400 font-semibold">{formatWeeklyCost(data.weeklyCost)}</span>
+            Weekly Revenue: <span className="text-yellow-400 font-semibold">{formatWeeklyRevenue(data.weeklyRevenue)}</span>
           </p>
         )}
         {data.ecommerce && (
