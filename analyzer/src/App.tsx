@@ -61,6 +61,7 @@ export default function App() {
         start: '', // Will be set to a default in useEffect
         end: ''    // Will be set to a default in useEffect
     });
+    const [dateFilterMode, setDateFilterMode] = useState<'started' | 'completed' | 'either'>('either');
     const [filteredDurations, setFilteredDurations] = useState<typeof projectDurations>([]);
     
     // Ref for scrolling to project select section
@@ -87,6 +88,48 @@ export default function App() {
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // Clear all filters
+    const handleClearFilters = () => {
+        setSearchQuery('');
+        setHighlightQuery('');
+        setTypeFilter('all');
+        setEcommerceFilter('all');
+        setDateFilterMode('either');
+        
+        // Reset to default date range (5 years ago to 1 year future)
+        const defaultStart = new Date();
+        defaultStart.setFullYear(defaultStart.getFullYear() - 5);
+        const defaultEnd = new Date();
+        defaultEnd.setFullYear(defaultEnd.getFullYear() + 1);
+        
+        setDateRange({
+            start: defaultStart.toISOString().split('T')[0] ?? '',
+            end: defaultEnd.toISOString().split('T')[0] ?? ''
+        });
+    };
+
+    // Handle date range changes with validation
+    const handleDateChange = (field: 'start' | 'end', value: string) => {
+        const newDateRange = { ...dateRange, [field]: value };
+        
+        // Validate: start date should not be after end date
+        if (newDateRange.start && newDateRange.end) {
+            const startDate = new Date(newDateRange.start);
+            const endDate = new Date(newDateRange.end);
+            
+            if (startDate > endDate) {
+                // If start is after end, adjust the other date
+                if (field === 'start') {
+                    newDateRange.end = value; // Set end to match start
+                } else {
+                    newDateRange.start = value; // Set start to match end
+                }
+            }
+        }
+        
+        setDateRange(newDateRange);
+    };
 
     // Filter and sort projects based on search, date range, and sort criteria
     useEffect(() => {
@@ -124,19 +167,32 @@ export default function App() {
             // Apply date range filter
             if (dateRange.start || dateRange.end) {
                 filtered = filtered.filter(project => {
-                    // Skip filtering if created date is null
-                    if (!project.created) return true;
+                    const createdDate = project.created ? new Date(project.created) : null;
+                    const completedDate = project.completed ? new Date(project.completed) : null;
                     
-                    const projectDate = new Date(project.created);
-                    const isAfterStart = !dateRange.start || projectDate >= new Date(dateRange.start);
-                    const isBeforeEnd = !dateRange.end || projectDate <= new Date(dateRange.end);
-                    return isAfterStart && isBeforeEnd;
+                    const checkDateInRange = (date: Date | null) => {
+                        if (!date) return false;
+                        const isAfterStart = !dateRange.start || date >= new Date(dateRange.start);
+                        const isBeforeEnd = !dateRange.end || date <= new Date(dateRange.end);
+                        return isAfterStart && isBeforeEnd;
+                    };
+                    
+                    switch (dateFilterMode) {
+                        case 'started':
+                            return checkDateInRange(createdDate);
+                        case 'completed':
+                            return checkDateInRange(completedDate);
+                        case 'either':
+                            return checkDateInRange(createdDate) || checkDateInRange(completedDate);
+                        default:
+                            return true;
+                    }
                 });
             }
             
             setFilteredDurations(filtered);
         }
-    }, [projectDurations, searchQuery, dateRange, projectSort, typeFilter, ecommerceFilter]);
+    }, [projectDurations, searchQuery, dateRange, projectSort, typeFilter, ecommerceFilter, dateFilterMode]);
 
     // Handle highlight updates
     useEffect(() => {
@@ -1113,15 +1169,52 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
                                         <input
                                             type="date"
                                             value={dateRange.start}
-                                            onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+                                            onChange={(e) => handleDateChange('start', e.target.value)}
                                             className="w-full h-10 bg-[#1e1e1e] text-gray-200 rounded-md px-3 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300"
                                         />
                                         <input
                                             type="date"
                                             value={dateRange.end}
-                                            onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+                                            onChange={(e) => handleDateChange('end', e.target.value)}
                                             className="w-full h-10 bg-[#1e1e1e] text-gray-200 rounded-md px-3 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300"
                                         />
+                                    </div>
+                                    {/* Validation warning */}
+                                    {dateRange.start && dateRange.end && new Date(dateRange.start) > new Date(dateRange.end) && (
+                                        <p className="text-yellow-500 text-xs mt-1">Date range adjusted: start date cannot be after end date</p>
+                                    )}
+                                    {/* Radio buttons underneath */}
+                                    <div className="mt-2 flex flex-wrap gap-3">
+                                        <label className="flex items-center cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="dateFilterMode"
+                                                checked={dateFilterMode === 'either'}
+                                                onChange={() => setDateFilterMode('either')}
+                                                className="w-4 h-4 text-purple-600 bg-gray-700 border-gray-600 focus:ring-purple-500 focus:ring-2"
+                                            />
+                                            <span className="ml-2 text-sm text-gray-300">Started OR Completed</span>
+                                        </label>
+                                        <label className="flex items-center cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="dateFilterMode"
+                                                checked={dateFilterMode === 'started'}
+                                                onChange={() => setDateFilterMode('started')}
+                                                className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-500 focus:ring-2"
+                                            />
+                                            <span className="ml-2 text-sm text-gray-300">Started</span>
+                                        </label>
+                                        <label className="flex items-center cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="dateFilterMode"
+                                                checked={dateFilterMode === 'completed'}
+                                                onChange={() => setDateFilterMode('completed')}
+                                                className="w-4 h-4 text-green-600 bg-gray-700 border-gray-600 focus:ring-green-500 focus:ring-2"
+                                            />
+                                            <span className="ml-2 text-sm text-gray-300">Completed</span>
+                                        </label>
                                     </div>
                                 </div>
 
@@ -1181,6 +1274,19 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
                                         <option value="Yes">E-commerce</option>
                                         <option value="No">No E-commerce</option>
                                     </select>
+                                </div>
+
+                                {/* Clear Filters Button */}
+                                <div className="w-full flex items-end">
+                                    <button
+                                        onClick={handleClearFilters}
+                                        className="w-full h-10 bg-red-600 hover:bg-red-700 text-white font-medium rounded-md px-4 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-[#0d1117] flex items-center justify-center gap-2"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                        Clear All Filters
+                                    </button>
                                 </div>
                             </div>
 
