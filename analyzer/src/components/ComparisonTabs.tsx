@@ -34,6 +34,10 @@ const REQUIRED_SECTIONS = [
   'Launch'
 ];
 
+// Extract constants for specific section names to improve maintainability
+// Note: Using explicit string instead of array indexing to avoid dependency on array order
+const ONBOARDING_SECTION = 'Onboarding Phase';
+
 interface ComparisonTabsProps {
   projectDurations: (ProjectDuration & { gid?: string })[];
   highlightedProjects: string[];
@@ -488,7 +492,24 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           let assignedDate: Date | undefined = undefined;
           console.log(`DEBUG: Checking first task for "${project.name}" - GID exists: ${!!firstTask.gid}, token exists: ${!!token}, apiBase exists: ${!!apiBase}`);
           
-          if (firstTask.gid && token && apiBase) {
+          // First, check if any task already has an assigned_at field from cache
+          // Find the earliest assigned date across all tasks by sorting chronologically
+          const tasksWithAssignedAt = sortedByCreation
+            .filter(task => task.assigned_at)
+            .sort((a, b) => {
+              // Compare ISO date strings directly for efficiency
+              const dateA = a.assigned_at!;
+              const dateB = b.assigned_at!;
+              return dateA.localeCompare(dateB);
+            });
+          
+          if (tasksWithAssignedAt.length > 0) {
+            assignedDate = new Date(tasksWithAssignedAt[0].assigned_at!);
+            console.log(`✓ Using earliest cached assigned_at from task "${tasksWithAssignedAt[0].name}": ${assignedDate.toISOString()}`);
+          }
+          
+          // If no cached assigned_at found, fetch from task stories
+          if (!assignedDate && firstTask.gid && token && apiBase) {
             console.log(`Fetching assignment date for "${project.name}" - Section "${selectedSection}"`);
             console.log(`First task: "${firstTask.name}" (GID: ${firstTask.gid})`);
             
@@ -557,7 +578,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
             }
             
             // Special case for Onboarding Phase: use project creation date if no other date is found
-            if (!assignedDate && selectedSection === 'Onboarding Phase') {
+            if (!assignedDate && selectedSection === ONBOARDING_SECTION) {
               console.log(`Onboarding Phase with no assignment date - checking project creation date`);
               if (project.created) {
                 assignedDate = new Date(project.created);
@@ -576,7 +597,13 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
             }
           }
           
-          // Calculate duration - use assignment date if available, otherwise fall back to created date, or use 0
+          // Calculate duration based on available dates
+          // Business logic:
+          // 1. Preferred: Use assignment date (from task history) to completion date
+          // 2. Onboarding Phase only: If no assignment date, use creation to completion
+          //    (Onboarding duration is measured from project creation to completion)
+          // 3. Other sections: If no assignment date, duration is 0 days
+          //    (Indicates section was never properly started/assigned)
           let durationDays = 0;
           const calculateDuration = (startDate: Date, endDate: Date): number => {
             const durationMs = endDate.getTime() - startDate.getTime();
@@ -584,14 +611,16 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           };
           
           if (assignedDate && lastTaskDate) {
+            // Use assignment date to completion date
             durationDays = calculateDuration(assignedDate, lastTaskDate);
-          } else if (firstTaskDate && lastTaskDate) {
-            // Fallback to created date if no assignment date
+            console.log(`Using assignment date to completion date for duration calculation`);
+          } else if (selectedSection === ONBOARDING_SECTION && firstTaskDate && lastTaskDate) {
+            // Special case: Onboarding Phase with no assignment date uses creation to completion date
             durationDays = calculateDuration(firstTaskDate, lastTaskDate);
-            console.log(`Using created_at fallback for duration calculation`);
+            console.log(`Using created_at to completed_at for Onboarding Phase (no assignment date found)`);
           } else {
-            // No valid dates - duration is 0
-            console.log(`No valid dates found - setting duration to 0 days`);
+            // For non-Onboarding sections with no assignment date, duration is 0
+            console.log(`No assignment date found for non-Onboarding section - setting duration to 0 days`);
             durationDays = 0;
           }
           
