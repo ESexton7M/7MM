@@ -34,6 +34,9 @@ const REQUIRED_SECTIONS = [
   'Launch'
 ];
 
+// Extract constants for specific section names to improve maintainability
+const ONBOARDING_SECTION = REQUIRED_SECTIONS[0]; // 'Onboarding Phase'
+
 interface ComparisonTabsProps {
   projectDurations: (ProjectDuration & { gid?: string })[];
   highlightedProjects: string[];
@@ -489,12 +492,14 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           console.log(`DEBUG: Checking first task for "${project.name}" - GID exists: ${!!firstTask.gid}, token exists: ${!!token}, apiBase exists: ${!!apiBase}`);
           
           // First, check if any task already has an assigned_at field from cache
-          for (const task of sortedByCreation) {
-            if (task.assigned_at) {
-              assignedDate = new Date(task.assigned_at);
-              console.log(`✓ Using cached assigned_at from task "${task.name}": ${assignedDate.toISOString()}`);
-              break;
-            }
+          // Find the earliest assigned date across all tasks
+          const tasksWithAssignedAt = sortedByCreation
+            .filter(task => task.assigned_at)
+            .sort((a, b) => new Date(a.assigned_at!).getTime() - new Date(b.assigned_at!).getTime());
+          
+          if (tasksWithAssignedAt.length > 0) {
+            assignedDate = new Date(tasksWithAssignedAt[0].assigned_at!);
+            console.log(`✓ Using earliest cached assigned_at from task "${tasksWithAssignedAt[0].name}": ${assignedDate.toISOString()}`);
           }
           
           // If no cached assigned_at found, fetch from task stories
@@ -567,7 +572,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
             }
             
             // Special case for Onboarding Phase: use project creation date if no other date is found
-            if (!assignedDate && selectedSection === 'Onboarding Phase') {
+            if (!assignedDate && selectedSection === ONBOARDING_SECTION) {
               console.log(`Onboarding Phase with no assignment date - checking project creation date`);
               if (project.created) {
                 assignedDate = new Date(project.created);
@@ -597,7 +602,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
             // Use assignment date to completion date
             durationDays = calculateDuration(assignedDate, lastTaskDate);
             console.log(`Using assignment date to completion date for duration calculation`);
-          } else if (selectedSection === 'Onboarding Phase' && firstTaskDate && lastTaskDate) {
+          } else if (selectedSection === ONBOARDING_SECTION && firstTaskDate && lastTaskDate) {
             // Special case: Onboarding Phase with no assignment date uses creation to completion date
             durationDays = calculateDuration(firstTaskDate, lastTaskDate);
             console.log(`Using created_at to completed_at for Onboarding Phase (no assignment date found)`);
