@@ -578,15 +578,16 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           
           // Calculate duration - use assignment date if available, otherwise fall back to created date, or use 0
           let durationDays = 0;
-          if (assignedDate) {
-            const startTime = assignedDate.getTime();
-            const lastTaskTime = lastTaskDate.getTime();
-            const durationMs = lastTaskTime - startTime;
-            durationDays = Math.max(0, Math.round(durationMs / (1000 * 60 * 60 * 24)));
+          const calculateDuration = (startDate: Date, endDate: Date): number => {
+            const durationMs = endDate.getTime() - startDate.getTime();
+            return Math.max(0, Math.round(durationMs / (1000 * 60 * 60 * 24)));
+          };
+          
+          if (assignedDate && lastTaskDate) {
+            durationDays = calculateDuration(assignedDate, lastTaskDate);
           } else if (firstTaskDate && lastTaskDate) {
             // Fallback to created date if no assignment date
-            const durationMs = lastTaskDate.getTime() - firstTaskDate.getTime();
-            durationDays = Math.max(0, Math.round(durationMs / (1000 * 60 * 60 * 24)));
+            durationDays = calculateDuration(firstTaskDate, lastTaskDate);
             console.log(`Using created_at fallback for duration calculation`);
           } else {
             // No valid dates - duration is 0
@@ -600,7 +601,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           sectionData[project.name] = {
             projectName: project.name,
             sectionDuration: durationDays,
-            completed: new Date(lastTaskDate).toISOString(),
+            completed: lastTaskDate ? new Date(lastTaskDate).toISOString() : new Date().toISOString(),
             assignedDate: assignedDate ? assignedDate.toISOString() : undefined
           };
         }
