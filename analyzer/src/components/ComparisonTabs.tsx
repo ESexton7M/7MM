@@ -195,7 +195,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
 
   // State to hold section-specific data
   const [projectSectionData, setProjectSectionData] = useState<
-    Record<string, { projectName: string; sectionDuration: number; completed: string; assignedDate?: string }>
+    Record<string, { projectName: string; sectionDuration: number; completed: string; assignedDate?: string; startDate?: string }>
   >({});
 
   // We're using predefined sections, but we still need to preload section data
@@ -363,6 +363,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           sectionDuration: number; 
           completed: string;
           assignedDate?: string;
+          startDate?: string;
         }> = {};
         
         // Process each project to get section-specific durations
@@ -484,38 +485,36 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           const firstTaskDate = new Date(firstTask.created_at);
           const lastTaskDate = new Date(lastTask.completed_at);
           
-          // Fetch assignment date from the first task's history
+          // Fetch assignment dates from ALL tasks in the section to find the oldest valid one
           let assignedDate: Date | undefined = undefined;
-          console.log(`DEBUG: Checking first task for "${project.name}" - GID exists: ${!!firstTask.gid}, token exists: ${!!token}, apiBase exists: ${!!apiBase}`);
+          console.log(`DEBUG: Checking tasks for "${project.name}" - token exists: ${!!token}, apiBase exists: ${!!apiBase}`);
           
-          if (firstTask.gid && token && apiBase) {
-            console.log(`Fetching assignment date for "${project.name}" - Section "${selectedSection}"`);
-            console.log(`First task: "${firstTask.name}" (GID: ${firstTask.gid})`);
+          if (token && apiBase) {
+            console.log(`Fetching assignment dates for "${project.name}" - Section "${selectedSection}"`);
+            console.log(`Checking all ${sortedByCreation.length} tasks for assignment dates...`);
             
-            // Try to get assignment date from first task
-            let tempAssignedDate = await fetchTaskAssignmentDate(firstTask.gid, firstTask.name || 'unknown');
+            // Collect all assignment dates from tasks in this section
+            const assignmentDates: Date[] = [];
             
-            // If not found, try subsequent tasks until we find one
-            if (!tempAssignedDate && sortedByCreation.length > 1) {
-              console.log(`No assignment date for first task, trying up to ${Math.min(5, sortedByCreation.length)} more tasks...`);
-              for (let i = 1; i < Math.min(5, sortedByCreation.length); i++) {
-                const nextTask = sortedByCreation[i];
-                if (nextTask && nextTask.gid) {
-                  console.log(`Trying task ${i + 1}: "${nextTask.name}"`);
-                  tempAssignedDate = await fetchTaskAssignmentDate(nextTask.gid, nextTask.name || 'unknown');
-                  if (tempAssignedDate) {
-                    console.log(`✓ Found assignment date from task ${i + 1}: ${tempAssignedDate.toISOString()}`);
-                    break;
-                  }
+            for (let i = 0; i < sortedByCreation.length; i++) {
+              const task = sortedByCreation[i];
+              if (task && task.gid) {
+                console.log(`Checking task ${i + 1}/${sortedByCreation.length}: "${task.name}"`);
+                const taskAssignedDate = await fetchTaskAssignmentDate(task.gid, task.name || 'unknown');
+                if (taskAssignedDate) {
+                  console.log(`✓ Found assignment date for task "${task.name}": ${taskAssignedDate.toISOString()}`);
+                  assignmentDates.push(taskAssignedDate);
                 }
               }
             }
             
-            if (tempAssignedDate) {
-              assignedDate = tempAssignedDate;
-              console.log(`✓ Using assignment date: ${assignedDate.toISOString()} for "${project.name}" - "${selectedSection}"`);
+            // Use the oldest (earliest) assignment date found
+            if (assignmentDates.length > 0) {
+              assignmentDates.sort((a, b) => a.getTime() - b.getTime());
+              assignedDate = assignmentDates[0];
+              console.log(`✓ Using oldest assignment date: ${assignedDate.toISOString()} for "${project.name}" - "${selectedSection}"`);
             } else {
-              console.warn(`✗ No assignment date found for "${project.name}" - "${selectedSection}" after checking ${Math.min(5, sortedByCreation.length)} tasks`);
+              console.warn(`✗ No assignment dates found in any task for "${project.name}" - "${selectedSection}"`);
             }
           }
           
@@ -529,22 +528,74 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
             }
           }
           
-          // Use assignment date for duration calculation if available, otherwise fall back to created date
-          const startTime = assignedDate ? assignedDate.getTime() : firstTaskDate.getTime();
+          // Determine the start time for this section based on the requirements
+          let startTime: number;
+          
+          if (selectedSection === 'Onboarding Phase') {
+            // Special case: For Onboarding Phase, use project creation date
+            const projectCreationDate = new Date(project.created);
+            startTime = projectCreationDate.getTime();
+            console.log(`Using project creation date for Onboarding Phase: ${projectCreationDate.toISOString()}`);
+          } else if (assignedDate) {
+            // Use the oldest valid assignment date from tasks in this section
+            startTime = assignedDate.getTime();
+            console.log(`Using oldest assignment date: ${assignedDate.toISOString()}`);
+          } else {
+            // No assignment dates found - need to check previous section's completion date
+            console.log(`No assignment dates found for "${selectedSection}", checking previous section...`);
+            
+            // Get the previous section in the sequence
+            const sectionIndex = REQUIRED_SECTIONS.indexOf(selectedSection);
+            let previousSectionCompletionDate: Date | undefined = undefined;
+            
+            if (sectionIndex > 0) {
+              const previousSection = REQUIRED_SECTIONS[sectionIndex - 1];
+              console.log(`Looking for completion date of previous section: "${previousSection}"`);
+              
+              // Get tasks from the previous section
+              const prevSectionTasks = tasks.filter(task => {
+                if (!task.completed || !task.completed_at || !task.created_at) return false;
+                const taskSection = extractSectionFromTask(task);
+                return mapToRequiredSection(taskSection) === previousSection;
+              });
+              
+              if (prevSectionTasks.length > 0) {
+                // Find the last completed task in the previous section
+                const sortedPrevTasks = [...prevSectionTasks].sort((a, b) => 
+                  new Date(b.completed_at!).getTime() - new Date(a.completed_at!).getTime()
+                );
+                previousSectionCompletionDate = new Date(sortedPrevTasks[0].completed_at!);
+                console.log(`Found previous section completion date: ${previousSectionCompletionDate.toISOString()}`);
+              }
+            }
+            
+            if (previousSectionCompletionDate) {
+              startTime = previousSectionCompletionDate.getTime();
+              console.log(`Using previous section completion date as start time: ${previousSectionCompletionDate.toISOString()}`);
+            } else {
+              // No previous section completion date found, fall back to first task creation date
+              // This will result in a section duration calculated from task creation
+              startTime = firstTaskDate.getTime();
+              console.log(`No previous section found or completed, using first task creation date: ${firstTaskDate.toISOString()}`);
+            }
+          }
+          
           const lastTaskTime = lastTaskDate.getTime();
           
-          // Calculate duration in days from assignment (or creation) to completion
+          // Calculate duration in days from start time to completion
           const durationMs = lastTaskTime - startTime;
           const durationDays = Math.max(0, Math.round(durationMs / (1000 * 60 * 60 * 24)));
           
           console.log(`Section "${selectedSection}" in "${project.name}": Duration = ${durationDays} days (${daysToWeeks(durationDays)} weeks)`);
+          console.log(`  Start: ${new Date(startTime).toISOString()}, End: ${new Date(lastTaskTime).toISOString()}`);
           
           // Store real section data
           sectionData[project.name] = {
             projectName: project.name,
             sectionDuration: durationDays,
             completed: new Date(lastTaskTime).toISOString(),
-            assignedDate: assignedDate ? assignedDate.toISOString() : undefined
+            assignedDate: assignedDate ? assignedDate.toISOString() : undefined,
+            startDate: new Date(startTime).toISOString() // Add start date for transparency
           };
         }
         
@@ -577,6 +628,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
         const durationInDays = sectionData ? sectionData.sectionDuration : project.duration;
         const completedDate = sectionData ? sectionData.completed : project.completed;
         const assignedDate = sectionData?.assignedDate;
+        const startDate = sectionData?.startDate;
         
         return {
           name: project.name,
@@ -584,6 +636,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           originalDuration: durationInDays, // Keep original days for tooltip
           completed: completedDate,
           assignedDate: assignedDate,
+          startDate: startDate,
           highlighted: isHighlighted,
           section: sectionToCompare
         };
@@ -604,12 +657,16 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
     console.log('Tooltip data:', {
       name: data.name,
       section: data.section,
+      startDate: data.startDate,
       assignedDate: data.assignedDate,
       completed: data.completed,
       duration: data.duration,
       originalDuration: data.originalDuration
     });
     
+    const startDateStr = data.startDate 
+      ? new Date(data.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      : null;
     const assignedDateStr = data.assignedDate 
       ? new Date(data.assignedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
       : null;
@@ -622,11 +679,19 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
         <p className="text-gray-200 font-bold mb-1">{data.name}</p>
         <p className="text-cyan-400 text-sm mb-2">{data.section}</p>
         
-        {assignedDateStr ? (
+        {startDateStr && (
           <p className="text-gray-300 mb-1">
-            Assigned: <span className="text-green-400">{assignedDateStr}</span>
+            Started: <span className="text-purple-400">{startDateStr}</span>
           </p>
-        ) : (
+        )}
+        
+        {assignedDateStr && (
+          <p className="text-gray-300 mb-1 text-xs">
+            (First assigned: <span className="text-green-400">{assignedDateStr}</span>)
+          </p>
+        )}
+        
+        {!assignedDateStr && (
           <p className="text-orange-400 text-sm mb-1">
             No assignment date found
           </p>
