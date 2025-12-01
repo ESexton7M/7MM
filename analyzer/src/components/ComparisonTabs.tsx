@@ -488,7 +488,17 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           let assignedDate: Date | undefined = undefined;
           console.log(`DEBUG: Checking first task for "${project.name}" - GID exists: ${!!firstTask.gid}, token exists: ${!!token}, apiBase exists: ${!!apiBase}`);
           
-          if (firstTask.gid && token && apiBase) {
+          // First, check if any task already has an assigned_at field from cache
+          for (const task of sortedByCreation) {
+            if (task.assigned_at) {
+              assignedDate = new Date(task.assigned_at);
+              console.log(`✓ Using cached assigned_at from task "${task.name}": ${assignedDate.toISOString()}`);
+              break;
+            }
+          }
+          
+          // If no cached assigned_at found, fetch from task stories
+          if (!assignedDate && firstTask.gid && token && apiBase) {
             console.log(`Fetching assignment date for "${project.name}" - Section "${selectedSection}"`);
             console.log(`First task: "${firstTask.name}" (GID: ${firstTask.gid})`);
             
@@ -576,7 +586,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
             }
           }
           
-          // Calculate duration - use assignment date if available, otherwise fall back to created date, or use 0
+          // Calculate duration - use assignment date if available, otherwise handle specially
           let durationDays = 0;
           const calculateDuration = (startDate: Date, endDate: Date): number => {
             const durationMs = endDate.getTime() - startDate.getTime();
@@ -584,14 +594,16 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           };
           
           if (assignedDate && lastTaskDate) {
+            // Use assignment date to completion date
             durationDays = calculateDuration(assignedDate, lastTaskDate);
-          } else if (firstTaskDate && lastTaskDate) {
-            // Fallback to created date if no assignment date
+            console.log(`Using assignment date to completion date for duration calculation`);
+          } else if (selectedSection === 'Onboarding Phase' && firstTaskDate && lastTaskDate) {
+            // Special case: Onboarding Phase with no assignment date uses creation to completion date
             durationDays = calculateDuration(firstTaskDate, lastTaskDate);
-            console.log(`Using created_at fallback for duration calculation`);
+            console.log(`Using created_at to completed_at for Onboarding Phase (no assignment date found)`);
           } else {
-            // No valid dates - duration is 0
-            console.log(`No valid dates found - setting duration to 0 days`);
+            // For non-Onboarding sections with no assignment date, duration is 0
+            console.log(`No assignment date found for non-Onboarding section - setting duration to 0 days`);
             durationDays = 0;
           }
           
