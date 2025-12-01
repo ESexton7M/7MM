@@ -35,7 +35,8 @@ const REQUIRED_SECTIONS = [
 ];
 
 // Extract constants for specific section names to improve maintainability
-const ONBOARDING_SECTION = REQUIRED_SECTIONS[0]; // 'Onboarding Phase'
+// Note: Using explicit string instead of array indexing to avoid dependency on array order
+const ONBOARDING_SECTION = 'Onboarding Phase';
 
 interface ComparisonTabsProps {
   projectDurations: (ProjectDuration & { gid?: string })[];
@@ -492,10 +493,15 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           console.log(`DEBUG: Checking first task for "${project.name}" - GID exists: ${!!firstTask.gid}, token exists: ${!!token}, apiBase exists: ${!!apiBase}`);
           
           // First, check if any task already has an assigned_at field from cache
-          // Find the earliest assigned date across all tasks
+          // Find the earliest assigned date across all tasks by sorting chronologically
           const tasksWithAssignedAt = sortedByCreation
             .filter(task => task.assigned_at)
-            .sort((a, b) => new Date(a.assigned_at!).getTime() - new Date(b.assigned_at!).getTime());
+            .sort((a, b) => {
+              // Compare ISO date strings directly for efficiency
+              const dateA = a.assigned_at!;
+              const dateB = b.assigned_at!;
+              return dateA.localeCompare(dateB);
+            });
           
           if (tasksWithAssignedAt.length > 0) {
             assignedDate = new Date(tasksWithAssignedAt[0].assigned_at!);
@@ -591,7 +597,13 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
             }
           }
           
-          // Calculate duration - use assignment date if available, otherwise handle specially
+          // Calculate duration based on available dates
+          // Business logic:
+          // 1. Preferred: Use assignment date (from task history) to completion date
+          // 2. Onboarding Phase only: If no assignment date, use creation to completion
+          //    (Onboarding duration is measured from project creation to completion)
+          // 3. Other sections: If no assignment date, duration is 0 days
+          //    (Indicates section was never properly started/assigned)
           let durationDays = 0;
           const calculateDuration = (startDate: Date, endDate: Date): number => {
             const durationMs = endDate.getTime() - startDate.getTime();
