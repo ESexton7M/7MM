@@ -519,6 +519,53 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
             }
           }
           
+          // If no assignment date found in any task, implement fallback logic
+          if (!assignedDate) {
+            console.log(`Implementing fallback logic for "${project.name}" - "${selectedSection}"...`);
+            
+            // Find the index of the current section
+            const currentSectionIndex = REQUIRED_SECTIONS.indexOf(selectedSection);
+            
+            // If this is not the first section, check when the previous section was completed
+            if (currentSectionIndex > 0) {
+              const previousSection = REQUIRED_SECTIONS[currentSectionIndex - 1];
+              console.log(`Checking previous section: "${previousSection}"`);
+              
+              // Get tasks from the previous section
+              const previousSectionTasks: Task[] = [];
+              
+              tasks.forEach(task => {
+                if (!task.completed || !task.completed_at || !task.created_at) return;
+                const taskSection = extractSectionFromTask(task);
+                if (mapToRequiredSection(taskSection) === previousSection) {
+                  previousSectionTasks.push(task);
+                }
+              });
+              
+              if (previousSectionTasks.length > 0) {
+                // Find the last completed task in the previous section
+                const sortedPreviousTasks = [...previousSectionTasks].sort((a, b) => 
+                  new Date(b.completed_at!).getTime() - new Date(a.completed_at!).getTime()
+                );
+                
+                const lastPreviousTask = sortedPreviousTasks[0];
+                if (lastPreviousTask && lastPreviousTask.completed_at) {
+                  assignedDate = new Date(lastPreviousTask.completed_at);
+                  console.log(`✓ Using previous section completion date as fallback: ${assignedDate.toISOString()}`);
+                }
+              }
+            }
+            
+            // Special case for Onboarding Phase: use project creation date if no other date is found
+            if (!assignedDate && selectedSection === 'Onboarding Phase') {
+              console.log(`Onboarding Phase with no assignment date - checking project creation date`);
+              if (project.created) {
+                assignedDate = new Date(project.created);
+                console.log(`✓ Using project creation date for Onboarding Phase: ${assignedDate.toISOString()}`);
+              }
+            }
+          }
+          
           // Print task details for debugging (especially for Field of Dreams)
           if (project.name.includes('Field of Dreams')) {
             console.log(`FIELD OF DREAMS - Section ${selectedSection}:`);
@@ -529,13 +576,24 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
             }
           }
           
-          // Use assignment date for duration calculation if available, otherwise fall back to created date
-          const startTime = assignedDate ? assignedDate.getTime() : firstTaskDate.getTime();
-          const lastTaskTime = lastTaskDate.getTime();
+          // Calculate duration - use assignment date if available, otherwise fall back to created date, or use 0
+          let durationDays = 0;
+          const calculateDuration = (startDate: Date, endDate: Date): number => {
+            const durationMs = endDate.getTime() - startDate.getTime();
+            return Math.max(0, Math.round(durationMs / (1000 * 60 * 60 * 24)));
+          };
           
-          // Calculate duration in days from assignment (or creation) to completion
-          const durationMs = lastTaskTime - startTime;
-          const durationDays = Math.max(0, Math.round(durationMs / (1000 * 60 * 60 * 24)));
+          if (assignedDate && lastTaskDate) {
+            durationDays = calculateDuration(assignedDate, lastTaskDate);
+          } else if (firstTaskDate && lastTaskDate) {
+            // Fallback to created date if no assignment date
+            durationDays = calculateDuration(firstTaskDate, lastTaskDate);
+            console.log(`Using created_at fallback for duration calculation`);
+          } else {
+            // No valid dates - duration is 0
+            console.log(`No valid dates found - setting duration to 0 days`);
+            durationDays = 0;
+          }
           
           console.log(`Section "${selectedSection}" in "${project.name}": Duration = ${durationDays} days (${daysToWeeks(durationDays)} weeks)`);
           
@@ -543,7 +601,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           sectionData[project.name] = {
             projectName: project.name,
             sectionDuration: durationDays,
-            completed: new Date(lastTaskTime).toISOString(),
+            completed: lastTaskDate ? new Date(lastTaskDate).toISOString() : new Date().toISOString(),
             assignedDate: assignedDate ? assignedDate.toISOString() : undefined
           };
         }
