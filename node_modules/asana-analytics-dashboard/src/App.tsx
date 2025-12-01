@@ -1344,6 +1344,8 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
                                   highlightedProjects={highlightedProjects}
                                   sortMethod={projectSort}
                                   onProjectClick={handleProjectClick}
+                                  token={token}
+                                  apiBase={ASANA_API_BASE}
                                 />
                                 
                                 {/* Overall Project Statistics - Integrated in same section */}
