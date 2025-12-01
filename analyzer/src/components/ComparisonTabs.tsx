@@ -485,7 +485,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           const firstTaskDate = new Date(firstTask.created_at);
           const lastTaskDate = new Date(lastTask.completed_at);
           
-          // Fetch assignment dates from ALL tasks in the section to find the oldest valid one
+          // Fetch assignment dates from all tasks in the section to find the oldest valid one
           let assignedDate: Date | undefined = undefined;
           console.log(`DEBUG: Checking tasks for "${project.name}" - token exists: ${!!token}, apiBase exists: ${!!apiBase}`);
           
@@ -510,8 +510,8 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
             
             // Use the oldest (earliest) assignment date found
             if (assignmentDates.length > 0) {
-              assignmentDates.sort((a, b) => a.getTime() - b.getTime());
-              assignedDate = assignmentDates[0];
+              const oldestTime = Math.min(...assignmentDates.map(d => d.getTime()));
+              assignedDate = new Date(oldestTime);
               console.log(`✓ Using oldest assignment date: ${assignedDate.toISOString()} for "${project.name}" - "${selectedSection}"`);
             } else {
               console.warn(`✗ No assignment dates found in any task for "${project.name}" - "${selectedSection}"`);
@@ -561,10 +561,8 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
               
               if (prevSectionTasks.length > 0) {
                 // Find the last completed task in the previous section
-                const sortedPrevTasks = [...prevSectionTasks].sort((a, b) => 
-                  new Date(b.completed_at!).getTime() - new Date(a.completed_at!).getTime()
-                );
-                previousSectionCompletionDate = new Date(sortedPrevTasks[0].completed_at!);
+                const latestCompletionTime = Math.max(...prevSectionTasks.map(t => new Date(t.completed_at!).getTime()));
+                previousSectionCompletionDate = new Date(latestCompletionTime);
                 console.log(`Found previous section completion date: ${previousSectionCompletionDate.toISOString()}`);
               }
             }
