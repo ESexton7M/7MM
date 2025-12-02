@@ -7,6 +7,7 @@ import {
   calculateStatistics, 
   formatNumber 
 } from '../utils/statistics';
+import { loadEnvConfig } from '../utils/env';
 
 interface SectionComparisonProps {
   projects: (ProjectDuration & { gid?: string })[];
@@ -54,6 +55,120 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
   const uniqueSections = REQUIRED_SECTIONS;
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+  
+  // Load environment config for API calls
+  const envConfig = loadEnvConfig();
+  const ASANA_API_BASE = envConfig.ASANA_API_BASE;
+  const token = envConfig.ASANA_TOKEN;
+  
+  /**
+   * Fetch task stories and find the first meaningful activity date.
+   * Meaningful activity includes:
+   * - Assignment to someone
+   * - Section changes
+   * - Status updates
+   * - Comments (indicates work is happening)
+   * - Due date changes
+   * - Attachments added
+   * 
+   * Excludes:
+   * - Task creation (we want post-creation activity)
+   * - Unassignment (task being removed from someone)
+   * - System-generated stories
+   */
+  const fetchFirstMeaningfulActivity = useCallback(async (taskGid: string): Promise<string | null> => {
+    if (!token) return null;
+    
+    try {
+      const storiesResponse = await fetch(
+        `${ASANA_API_BASE}/tasks/${taskGid}/stories?opt_fields=created_at,resource_type,resource_subtype,text,type`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      
+      if (!storiesResponse.ok) return null;
+      
+      const storiesData = await storiesResponse.json();
+      const stories = storiesData.data || [];
+      
+      // Find the first story that represents meaningful activity
+      // Stories are typically in chronological order
+      for (const story of stories) {
+        // Skip if no text or created_at
+        if (!story.created_at) continue;
+        
+        const text = (story.text || '').toLowerCase();
+        const subtype = story.resource_subtype || '';
+        
+        // Skip creation stories
+        if (subtype === 'added_to_project' && text.includes('added this task')) continue;
+        if (text.includes('created this task')) continue;
+        
+        // Skip unassignment stories
+        if (text.includes('unassigned') || text.includes('removed assignee')) continue;
+        if (text.includes('removed from')) continue;
+        
+        // Accept various meaningful activities:
+        // 1. Assignment stories
+        if (text.includes('assigned to') || text.includes('assigned this task') || subtype === 'assigned') {
+          console.log(`Task ${taskGid}: Found assignment activity at ${story.created_at}`);
+          return story.created_at;
+        }
+        
+        // 2. Section/column changes
+        if (text.includes('moved this task') || text.includes('moved to') || subtype === 'section_changed') {
+          console.log(`Task ${taskGid}: Found section move activity at ${story.created_at}`);
+          return story.created_at;
+        }
+        
+        // 3. Due date changes
+        if (text.includes('due date') || text.includes('due on') || subtype === 'due_date_changed') {
+          console.log(`Task ${taskGid}: Found due date activity at ${story.created_at}`);
+          return story.created_at;
+        }
+        
+        // 4. Status/completion changes
+        if (text.includes('marked') || text.includes('completed') || subtype === 'marked_complete' || subtype === 'marked_incomplete') {
+          console.log(`Task ${taskGid}: Found status activity at ${story.created_at}`);
+          return story.created_at;
+        }
+        
+        // 5. Comments (indicates active work)
+        if (subtype === 'comment_added' || story.type === 'comment') {
+          console.log(`Task ${taskGid}: Found comment activity at ${story.created_at}`);
+          return story.created_at;
+        }
+        
+        // 6. Attachments
+        if (text.includes('attached') || subtype === 'attachment_added') {
+          console.log(`Task ${taskGid}: Found attachment activity at ${story.created_at}`);
+          return story.created_at;
+        }
+        
+        // 7. Subtask additions (indicates work breakdown)
+        if (text.includes('added subtask') || subtype === 'subtask_added') {
+          console.log(`Task ${taskGid}: Found subtask activity at ${story.created_at}`);
+          return story.created_at;
+        }
+        
+        // 8. Description changes
+        if (text.includes('changed the description') || subtype === 'description_changed') {
+          console.log(`Task ${taskGid}: Found description activity at ${story.created_at}`);
+          return story.created_at;
+        }
+        
+        // 9. Name changes
+        if (text.includes('changed the name') || subtype === 'name_changed') {
+          console.log(`Task ${taskGid}: Found name change activity at ${story.created_at}`);
+          return story.created_at;
+        }
+      }
+      
+      return null;
+    } catch (err) {
+      console.warn(`Could not fetch stories for task ${taskGid}:`, err);
+      return null;
+    }
+  }, [token, ASANA_API_BASE]);
   
   // Extract section data for each project
   const fetchSectionData = useCallback(async () => {
@@ -232,9 +347,9 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
           isInProgress?: boolean;
         }> = {};
         
-        // Process each section
-        Object.entries(sectionTasks).forEach(([section, tasks]) => {
-          if (tasks.length === 0) return;
+        // Process each section - using for...of to support async operations
+        for (const [section, tasks] of Object.entries(sectionTasks)) {
+          if (tasks.length === 0) continue;
           
           console.log(`Calculating stats for section "${section}" in project "${project.name}" - ${tasks.length} tasks`);
           
@@ -259,33 +374,68 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
           
           console.log(`Found ${mainTasks.length} main tasks out of ${tasks.length} total tasks in "${section}"`);
           
-          // Get the tasks sorted by creation and completion dates
-          const sortedByCreation = [...tasksToUse].sort((a, b) => 
-            new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime()
-          );
+          // IMPORTANT: Fetch first meaningful activity dates for all tasks in this section
+          // This gives us when work actually started on each task (not just when it was created)
+          console.log(`Fetching activity dates for ${tasksToUse.length} tasks in section "${section}"...`);
           
-          const sortedByCompletion = [...tasksToUse].sort((a, b) => 
-            new Date(a.completed_at!).getTime() - new Date(b.completed_at!).getTime()
-          );
+          // Collect activity dates for each task
+          const taskActivityDates: { task: Task; activityDate: Date; source: string }[] = [];
           
-          // Safety check - make sure we have tasks
-          if (sortedByCreation.length === 0 || sortedByCompletion.length === 0) {
+          for (const task of tasksToUse) {
+            // Try to get the first meaningful activity date
+            const activityDateStr = await fetchFirstMeaningfulActivity(task.gid);
+            
+            if (activityDateStr) {
+              taskActivityDates.push({
+                task,
+                activityDate: new Date(activityDateStr),
+                source: 'activity'
+              });
+            } else if (task.created_at) {
+              // Fallback to creation date if no meaningful activity found
+              taskActivityDates.push({
+                task,
+                activityDate: new Date(task.created_at),
+                source: 'created'
+              });
+            }
+          }
+          
+          // Sort by activity date to find the earliest
+          taskActivityDates.sort((a, b) => a.activityDate.getTime() - b.activityDate.getTime());
+          
+          // Log the activity dates for debugging
+          console.log(`Activity dates for section "${section}" in "${project.name}":`);
+          taskActivityDates.slice(0, 5).forEach(({ task, activityDate, source }) => {
+            console.log(`  - "${task.name}": ${activityDate.toISOString().slice(0, 10)} (${source})`);
+          });
+          
+          // Get completion dates for sorting
+          const sortedByCompletion = [...tasksToUse]
+            .filter(t => t.completed_at)
+            .sort((a, b) => 
+              new Date(a.completed_at!).getTime() - new Date(b.completed_at!).getTime()
+            );
+          
+          // Safety check - make sure we have data
+          if (taskActivityDates.length === 0) {
             console.warn(`No valid tasks for section "${section}" in project "${project.name}"`);
-            return;
+            continue;
           }
           
-          // Get first and last dates
-          const firstTask = sortedByCreation[0];
-          const lastTask = sortedByCompletion[sortedByCompletion.length - 1];
+          // Get first activity date and last completion date
+          const firstActivityData = taskActivityDates[0];
+          const lastTask = sortedByCompletion.length > 0 
+            ? sortedByCompletion[sortedByCompletion.length - 1]
+            : null;
           
-          // Safety check again
-          if (!firstTask || !lastTask || !firstTask.created_at || !lastTask.completed_at) {
-            console.warn(`Invalid task data for section "${section}" in project "${project.name}"`);
-            return;
+          if (!firstActivityData) {
+            console.warn(`No activity data for section "${section}" in project "${project.name}"`);
+            continue;
           }
           
-          const firstTaskDate = new Date(firstTask.created_at);
-          let actualLastTaskDate = new Date(lastTask.completed_at);
+          const firstTaskDate = firstActivityData.activityDate;
+          let actualLastTaskDate = lastTask?.completed_at ? new Date(lastTask.completed_at) : new Date();
           
           // IMPORTANT: Don't use the project's launch date for non-launch sections
           // If this is not the Launch section, make sure we're not using a task 
@@ -329,8 +479,8 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
           }
           
           // Print task details for debugging
-          console.log(`First task in ${section}: "${firstTask.name}" created on ${firstTaskDate.toISOString()}`);
-          console.log(`Last task in ${section}: "${lastTask.name}" completed on ${actualLastTaskDate.toISOString()}`);
+          console.log(`First activity in ${section}: "${firstActivityData.task.name}" on ${firstTaskDate.toISOString()} (source: ${firstActivityData.source})`);
+          console.log(`Last task in ${section}: "${lastTask?.name || 'N/A'}" completed on ${actualLastTaskDate.toISOString()}`);
 
           // Check if this section is still in progress (has incomplete tasks)
           const hasIncompleteTasks = tasksToUse.some(task => !task.completed);
@@ -472,7 +622,7 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
             lastTaskDate: actualLastTaskDate,
             isInProgress: hasIncompleteTasks || forceInProgress
           };
-        });
+        }
         
         if (Object.keys(sectionStats).length > 0) {
           allProjectData.push({
@@ -510,7 +660,7 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [projects, selectedSection, REQUIRED_SECTIONS]);
+  }, [projects, selectedSection, token, ASANA_API_BASE, fetchFirstMeaningfulActivity]);
   
   // Map any section name to one of our required sections based on similarity
   const mapToRequiredSection = (sectionName: string): string | null => {
