@@ -251,118 +251,24 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
           sectionTasks[section] = [];
         });
         
-// Special handling for Field of Dreams project - directly map any known tasks
-        if (project.name.includes('Field of Dreams')) {
-          console.log("Processing Field of Dreams project specifically");
+        // Standard processing for all projects
+        // Group completed tasks by section
+        tasks.forEach(task => {
+          if (!task.completed || !task.completed_at || !task.created_at) return;
           
-          // First, log ALL tasks regardless of completion status
-          console.log("ALL Field of Dreams tasks (including incomplete):");
-          tasks.forEach(task => {
-            console.log(`Task: "${task.name}" - Completed: ${task.completed} - ${task.completed_at || 'NOT COMPLETED'}`);
-          });
+          // Determine section name from task
+          let sectionName = extractSectionFromTask(task);
           
-          // Look specifically for the assets task
-          const assetsTask = tasks.find(task => 
-            task.name?.toLowerCase().includes('assets') || 
-            task.name?.toLowerCase().includes('asset')
-          );
+          // Map section names to our required sections if needed
+          const mappedSection = mapToRequiredSection(sectionName);
           
-          if (assetsTask) {
-            console.log("FOUND ASSETS TASK:", {
-              name: assetsTask.name,
-              completed: assetsTask.completed,
-              completed_at: assetsTask.completed_at,
-              created_at: assetsTask.created_at
-            });
+          if (mappedSection && REQUIRED_SECTIONS.includes(mappedSection)) {
+            // Add task to its mapped section
+            if (sectionTasks[mappedSection]) {
+              sectionTasks[mappedSection].push(task);
+            }
           }
-          
-          // Group ALL tasks by section, including incomplete ones
-          tasks.forEach(task => {
-            if (!task.created_at) return; // Only require created_at
-            
-            const taskName = task.name?.toLowerCase() || '';
-            const createdDate = new Date(task.created_at);
-            const completedDate = task.completed_at ? new Date(task.completed_at) : null;
-            const completedStr = completedDate ? completedDate.toISOString().slice(0, 10) : 'INCOMPLETE';
-            
-            // Log task details for debugging
-            console.log(`Field of Dreams task: "${task.name}" - created: ${createdDate.toISOString().slice(0, 10)}, status: ${task.completed ? `completed on ${completedStr}` : 'INCOMPLETE'}`);
-            
-            // Special handling for the assets task
-            if (taskName.includes('asset')) {
-              console.log("ASSETS TASK FOUND - Forcing to Onboarding Phase and marking as incomplete");
-              if (!sectionTasks['Onboarding Phase']) {
-                sectionTasks['Onboarding Phase'] = [];
-              }
-              // Ensure this task is included and marked as incomplete if it's actually incomplete
-              if (!task.completed) {
-                sectionTasks['Onboarding Phase'].push(task);
-                return; // Skip further processing for this task
-              }
-            }
-            
-            // Direct mapping based on task name keywords for Field of Dreams
-            let targetSection = null;
-            
-            if (taskName.includes('kickoff') || 
-                taskName.includes('planning') || 
-                taskName.includes('information gathering') || 
-                taskName.includes('asset')) { // Explicitly add assets to Onboarding
-              targetSection = 'Onboarding Phase';
-            } 
-            else if (taskName.includes('design') || 
-                     taskName.includes('mock') || 
-                     taskName.includes('wireframe') ||
-                     (completedStr !== 'INCOMPLETE' && completedStr <= '2025-07-31')) { // Specific date for Mockup Phase
-              targetSection = 'Mockup Phase';
-            }
-            else if (taskName.includes('develop') || 
-                     taskName.includes('code') || 
-                     taskName.includes('build') ||
-                     (completedStr !== 'INCOMPLETE' && completedStr > '2025-07-31' && completedStr <= '2025-08-20')) { // Specific date for Development Phase
-              targetSection = 'Development Phase';
-            }
-            else if (taskName.includes('launch') || 
-                     taskName.includes('deploy') || 
-                     taskName.includes('publish') ||
-                     (completedStr !== 'INCOMPLETE' && completedStr > '2025-08-20')) { // Everything after August 20 is Launch
-              targetSection = 'Launch';
-            }
-            else {
-              // Determine section name from task via standard logic
-              let sectionName = extractSectionFromTask(task);
-              targetSection = mapToRequiredSection(sectionName);
-            }
-            
-            if (targetSection && REQUIRED_SECTIONS.includes(targetSection)) {
-              if (!sectionTasks[targetSection]) {
-                sectionTasks[targetSection] = [];
-              }
-              sectionTasks[targetSection]!.push(task);
-            }
-          });
-        } 
-        else {
-          // Standard processing for other projects
-          // Group completed tasks by section
-          tasks.forEach(task => {
-            if (!task.completed || !task.completed_at || !task.created_at) return;
-            
-            // Determine section name from task
-            let sectionName = extractSectionFromTask(task);
-            
-            // Map section names to our required sections if needed
-            // This can help with fuzzy matching section names
-            const mappedSection = mapToRequiredSection(sectionName);
-            
-            if (mappedSection && REQUIRED_SECTIONS.includes(mappedSection)) {
-              // Add task to its mapped section
-              if (sectionTasks[mappedSection]) {
-                sectionTasks[mappedSection].push(task);
-              }
-            }
-          });
-        }
+        });
         
         // Filter to only keep sections that have tasks
         const sectionsWithTasks = REQUIRED_SECTIONS.filter(section => 
@@ -674,9 +580,9 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
           console.log(`  First task date: ${firstTaskDate.toISOString()}`);
           console.log(`  Last task date: ${actualLastTaskDate.toISOString()}`);
           
-          // Check if this is Field of Dreams project (for debugging)
-          if (project.name.includes('Field of Dreams')) {
-            console.log(`FIELD OF DREAMS - Section ${section} - Start: ${firstTaskDate.toISOString().slice(0, 10)}, End: ${actualLastTaskDate.toISOString().slice(0, 10)}`);
+          // Debug logging
+          if (false) { // Disable verbose logging
+            console.log(`${project.name} - Section ${section} - Start: ${firstTaskDate.toISOString().slice(0, 10)}, End: ${actualLastTaskDate.toISOString().slice(0, 10)}`);
           }
           
           // Store section data with first/last task dates
@@ -737,7 +643,7 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
     // Case insensitive matching
     const lowerSectionName = sectionName.toLowerCase();
     
-    // Specific matches for Field of Dreams sections - This is critical for fixing date issues
+    // Section name mapping to standard phases
     if (lowerSectionName.includes('kickoff') || 
         lowerSectionName.includes('information gathering') || 
         lowerSectionName.includes('research')) {

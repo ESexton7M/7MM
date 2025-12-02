@@ -329,13 +329,6 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
     // Case insensitive matching
     const lowerSectionName = sectionName.toLowerCase();
     
-    // Specific matches for Field of Dreams sections - This is critical for fixing date issues
-    if (lowerSectionName.includes('kickoff') || 
-        lowerSectionName.includes('information gathering') || 
-        lowerSectionName.includes('research')) {
-      return 'Onboarding Phase';
-    }
-    
     // More precise section mapping with stronger keywords first
     // Onboarding/Discovery Phase
     if (lowerSectionName.includes('onboard') || 
@@ -519,55 +512,12 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           // Filter for completed tasks in the selected section
           let sectionTasks: Task[] = [];
           
-          // Special handling for Field of Dreams project
-          if (project.name.includes('Field of Dreams')) {
-            console.log(`ComparisonTabs: Processing Field of Dreams tasks for section ${selectedSection}`);
-            
-            // Filter tasks specifically for Field of Dreams
-            sectionTasks = tasks.filter(task => {
-              if (!task.completed || !task.completed_at || !task.created_at) return false;
-              
-              const taskName = task.name?.toLowerCase() || '';
-              const completedDate = new Date(task.completed_at);
-              const completedStr = completedDate.toISOString().slice(0, 10);
-              
-              // Direct mapping based on task name keywords and completion dates for Field of Dreams
-              if (selectedSection === 'Onboarding Phase') {
-                return taskName.includes('kickoff') || 
-                       taskName.includes('planning') || 
-                       taskName.includes('information gathering');
-              } 
-              else if (selectedSection === 'Mockup Phase') {
-                return (taskName.includes('design') || 
-                        taskName.includes('mock') || 
-                        taskName.includes('wireframe') ||
-                        completedStr <= '2025-07-31'); // Specific date for Mockup Phase
-              }
-              else if (selectedSection === 'Development Phase') {
-                return (taskName.includes('develop') || 
-                        taskName.includes('code') || 
-                        taskName.includes('build') ||
-                        (completedStr > '2025-07-31' && completedStr <= '2025-08-20')); // Specific date for Development Phase
-              }
-              else if (selectedSection === 'Launch') {
-                return (taskName.includes('launch') || 
-                        taskName.includes('deploy') || 
-                        taskName.includes('publish') ||
-                        completedStr > '2025-08-20'); // Everything after August 20 is Launch
-              }
-              
-              return false;
-            });
-            
-            console.log(`Found ${sectionTasks.length} Field of Dreams tasks for ${selectedSection}`);
-          } else {
-            // Standard processing for other projects
-            sectionTasks = tasks.filter(task => {
-              if (!task.completed || !task.completed_at || !task.created_at) return false;
-              const taskSection = extractSectionFromTask(task);
-              return mapToRequiredSection(taskSection) === selectedSection;
-            });
-          }
+          // Standard processing for all projects
+          sectionTasks = tasks.filter(task => {
+            if (!task.completed || !task.completed_at || !task.created_at) return false;
+            const taskSection = extractSectionFromTask(task);
+            return mapToRequiredSection(taskSection) === selectedSection;
+          });
           
           if (sectionTasks.length === 0) continue;
           
@@ -721,15 +671,8 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
             }
           }
           
-          // Print task details for debugging (especially for Field of Dreams)
-          if (project.name.includes('Field of Dreams')) {
-            console.log(`FIELD OF DREAMS - Section ${selectedSection}:`);
-            console.log(`First task: "${firstTask.name}" created on ${firstTaskDate.toISOString().slice(0, 10)}`);
-            console.log(`Last task: "${lastTask.name}" completed on ${lastTaskDate.toISOString().slice(0, 10)}`);
-            if (assignedDate) {
-              console.log(`Assignment date found: ${assignedDate.toISOString().slice(0, 10)}`);
-            }
-          }
+          // Debug logging for section data
+          console.log(`Section "${selectedSection}" in "${project.name}": First task "${firstTask.name}" created ${firstTaskDate.toISOString().slice(0, 10)}, Last task completed ${lastTaskDate.toISOString().slice(0, 10)}${assignedDate ? `, Assigned ${assignedDate.toISOString().slice(0, 10)}` : ''}`);
           
           // Calculate duration based on available dates
           // Business logic:
