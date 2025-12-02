@@ -45,6 +45,7 @@ interface ComparisonTabsProps {
   onProjectClick?: (projectName: string) => void;
   token?: string; // Asana API token
   apiBase?: string; // Asana API base URL
+  preloadedTasks?: Record<string, Task[]>; // Pre-fetched tasks with first_activity_at already populated
 }
 
 type ComparisonMode = 'projects' | 'sections';
@@ -56,7 +57,8 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
   sortMethod, 
   onProjectClick,
   token,
-  apiBase = 'https://app.asana.com/api/1.0'
+  apiBase = 'https://app.asana.com/api/1.0',
+  preloadedTasks = {}
 }) => {
   const [activeTab, setActiveTab] = useState<TabId>('projects');
   // Start with the first required section as the default
@@ -259,6 +261,9 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
   const [projectSectionData, setProjectSectionData] = useState<
     Record<string, { projectName: string; sectionDuration: number; completed: string; assignedDate?: string }>
   >({});
+  
+  // Loading state for section data
+  const [sectionDataLoading, setSectionDataLoading] = useState<boolean>(false);
 
   // We're using predefined sections, but we still need to preload section data
   useEffect(() => {
@@ -419,11 +424,15 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
     console.log('Starting fetchSectionData...');
     
     const fetchSectionData = async () => {
+      setSectionDataLoading(true);
       try {
-        // Use SERVER cache which has first_activity_at data (fetched during analyzeAllProjects)
+        // First, check if we have preloaded tasks from App.tsx (fastest - already in memory)
+        const hasPreloadedTasks = Object.keys(preloadedTasks).length > 0;
+        console.log(`📊 ComparisonTabs: ${hasPreloadedTasks ? 'Using PRELOADED tasks from App.tsx' : 'No preloaded tasks, will use server cache'}`);
+        
+        // Use SERVER cache as fallback
         const { getCachedProjects, getCachedProjectTasks } = await import('../utils/serverCache');
         const cachedProjects = await getCachedProjects();
-        console.log('📦 ComparisonTabs: Using SERVER cache for section data (has first_activity_at)');
         
         // Filter to only completed projects for section comparison
         const completedProjects = filterWebsiteProjectsOnly(projectDurations);
@@ -450,8 +459,21 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
             projectGid = cachedProject.gid;
           }
           
-          // Get tasks for this project (await since serverCache returns Promise)
-          const tasks = await getCachedProjectTasks(projectGid);
+          // Get tasks: prefer preloaded tasks (already have first_activity_at), fallback to server cache
+          let tasks: Task[] | null = null;
+          if (hasPreloadedTasks && projectGid && preloadedTasks[projectGid]) {
+            tasks = preloadedTasks[projectGid] || null;
+            if (tasks) {
+              console.log(`⚡ Using ${tasks.length} preloaded tasks for "${project.name}"`);
+            }
+          } else {
+            // Fallback to server cache
+            tasks = await getCachedProjectTasks(projectGid);
+            if (tasks) {
+              console.log(`📦 Using ${tasks.length} cached tasks for "${project.name}"`);
+            }
+          }
+          
           if (!tasks || tasks.length === 0) continue;
           
           // Log first task to verify first_activity_at is present
@@ -714,11 +736,13 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
         setProjectSectionData(sectionData);
       } catch (err) {
         console.error('Error fetching section data:', err);
+      } finally {
+        setSectionDataLoading(false);
       }
     };
     
     fetchSectionData();
-  }, [activeTab, selectedSection, projectDurations]);
+  }, [activeTab, selectedSection, projectDurations, preloadedTasks]);
 
   // Generate data for section-based comparison
   const sectionComparisonData = useMemo(() => {
@@ -949,9 +973,17 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
                 />
                 <span>{selectedSection}</span>
               </div>
+              {sectionDataLoading && (
+                <span className="ml-4 text-sm text-indigo-400 animate-pulse">Loading section data...</span>
+              )}
             </div>
 
-            {sectionComparisonData.length > 0 ? (
+            {sectionDataLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+                <span className="ml-3 text-gray-400">Loading section data...</span>
+              </div>
+            ) : sectionComparisonData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300} className="sm:!h-[400px]">
                 <BarChart
                   data={sectionComparisonData}

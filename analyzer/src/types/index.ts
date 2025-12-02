@@ -55,6 +55,7 @@ export interface DailyTaskData {
 // Project duration data for cross-project analytics
 export interface ProjectDuration {
   name: string;
+  gid?: string; // Project GID for matching with preloaded tasks
   duration: number;
   created: string;
   completed: string;
@@ -76,6 +77,18 @@ export interface SectionCompletionSpan {
   section: string;
   span: number;
 }
+
+// Precomputed section data for a project
+export interface ProjectSectionData {
+  projectName: string;
+  projectGid: string;
+  sectionDuration: number;
+  completed: string;
+  assignedDate?: string;
+}
+
+// Map of section name -> project name -> section data
+export type PrecomputedSectionData = Record<string, Record<string, ProjectSectionData>>;
 
 // Date range filter
 export interface DateRangeFilter {

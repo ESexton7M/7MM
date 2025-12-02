@@ -136,6 +136,9 @@ export default function App() {
     const [analyzing, setAnalyzing] = useState(false);
     const [analysisError, setAnalysisError] = useState('');
     
+    // Store all fetched project tasks for ComparisonTabs to use (avoids re-fetching)
+    const [allProjectTasks, setAllProjectTasks] = useState<Record<string, Task[]>>({});
+    
     // Section analytics are now handled in ComparisonTabs component
 
     // Sorting and filtering state for project comparison
@@ -790,6 +793,7 @@ export default function App() {
                                     
                                     durations.push({
                                         name: project.name,
+                                        gid: project.gid,
                                         duration,
                                         created: startDate.toISOString(),
                                         completed: endDate.toISOString(),
@@ -818,6 +822,7 @@ export default function App() {
                                 
                                 durations.push({
                                     name: project.name,
+                                    gid: project.gid,
                                     duration, // Duration from start to today
                                     created: startDate.toISOString(),
                                     completed: '', // No completion date yet
@@ -840,6 +845,16 @@ export default function App() {
             
             // Cache the analyzed data
             await cacheAnalyzedData(durations);
+            
+            // Store all project tasks for ComparisonTabs to use (includes first_activity_at)
+            const tasksMap: Record<string, Task[]> = {};
+            allTasksResults.forEach(result => {
+                if (result.project.gid && result.tasks && result.tasks.length > 0) {
+                    tasksMap[result.project.gid] = result.tasks as Task[];
+                }
+            });
+            setAllProjectTasks(tasksMap);
+            console.log(`📊 App.tsx: Stored tasks for ${Object.keys(tasksMap).length} projects in state`);
             
             setProjectDurations(sorted);
         } catch (e) {
@@ -1483,6 +1498,7 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
                                   onProjectClick={handleProjectClick}
                                   token={token}
                                   apiBase={ASANA_API_BASE}
+                                  preloadedTasks={allProjectTasks}
                                 />
                                 
                                 {/* Overall Project Statistics - Integrated in same section */}

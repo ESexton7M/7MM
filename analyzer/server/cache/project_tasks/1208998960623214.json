@@ -121,7 +121,8 @@
         "gid": "1208998960623214",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": "2025-03-12T15:05:54.393Z"
   },
   {
     "gid": "1209485655461636",
@@ -245,7 +246,8 @@
         "gid": "1208998960623214",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": "2025-02-24T15:44:34.923Z"
   },
   {
     "gid": "1209342779363017",
@@ -369,7 +371,8 @@
         "gid": "1208998960623214",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": "2025-02-06T17:33:17.343Z"
   },
   {
     "gid": "1209235595289835",
@@ -493,7 +496,8 @@
         "gid": "1208998960623214",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": "2025-01-24T19:32:27.127Z"
   },
   {
     "gid": "1211384462080276",
@@ -617,7 +621,8 @@
         "gid": "1208998960623214",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": "2025-09-17T16:40:24.734Z"
   },
   {
     "gid": "1211643043173181",
@@ -735,7 +740,8 @@
         "gid": "1208998960623214",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": "2025-10-14T20:33:08.100Z"
   },
   {
     "gid": "1209000336346830",
@@ -859,7 +865,8 @@
         "gid": "1208998960623214",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": "2024-12-17T16:07:52.441Z"
   },
   {
     "gid": "1209000336346839",
@@ -983,7 +990,8 @@
         "gid": "1208998960623214",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": "2025-04-01T18:41:11.961Z"
   },
   {
     "gid": "1209000336506665",
@@ -1107,12 +1115,13 @@
         "gid": "1208998960623214",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": "2024-12-17T16:07:58.162Z"
   },
   {
     "gid": "1209000336506675",
-    "completed": false,
-    "completed_at": null,
+    "completed": true,
+    "completed_at": "2025-11-19T20:51:56.007Z",
     "created_at": "2024-12-17T16:06:31.686Z",
     "custom_fields": [
       {
@@ -1193,16 +1202,16 @@
           }
         ],
         "enum_value": {
-          "gid": "1204456891952869",
-          "color": "blue",
+          "gid": "1204456891952873",
+          "color": "blue-green",
           "enabled": true,
-          "name": "Not Started",
+          "name": "Done",
           "resource_type": "enum_option"
         },
         "name": "Task Progress",
         "description": "Asana-created. Track the progress of each task.",
         "created_by": null,
-        "display_value": "Not Started",
+        "display_value": "Done",
         "resource_subtype": "enum",
         "resource_type": "custom_field",
         "is_formula_field": false,
@@ -1231,7 +1240,127 @@
         "gid": "1208998960623214",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": "2025-01-07T14:21:43.144Z"
+  },
+  {
+    "gid": "1211998118065144",
+    "completed": false,
+    "completed_at": null,
+    "created_at": "2025-11-19T21:39:35.867Z",
+    "custom_fields": [
+      {
+        "gid": "1204456891952863",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952864",
+            "color": "red",
+            "enabled": true,
+            "name": "High",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952865",
+            "color": "orange",
+            "enabled": true,
+            "name": "Medium",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952866",
+            "color": "yellow-orange",
+            "enabled": true,
+            "name": "Low",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Priority",
+        "description": "Asana-created. Track the priority of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204456891952868",
+        "enabled": true,
+        "enum_options": [
+          {
+            "gid": "1204456891952869",
+            "color": "blue",
+            "enabled": true,
+            "name": "Not Started",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952870",
+            "color": "cool-gray",
+            "enabled": true,
+            "name": "In Progress",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952871",
+            "color": "yellow",
+            "enabled": true,
+            "name": "Waiting",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952872",
+            "color": "orange",
+            "enabled": true,
+            "name": "Deferred",
+            "resource_type": "enum_option"
+          },
+          {
+            "gid": "1204456891952873",
+            "color": "blue-green",
+            "enabled": true,
+            "name": "Done",
+            "resource_type": "enum_option"
+          }
+        ],
+        "enum_value": null,
+        "name": "Task Progress",
+        "description": "Asana-created. Track the progress of each task.",
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "enum",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "enum"
+      },
+      {
+        "gid": "1204571851534991",
+        "enabled": true,
+        "name": "Estimated time",
+        "description": "Asana-created. Estimate time to complete a task.",
+        "number_value": null,
+        "precision": 0,
+        "created_by": null,
+        "display_value": null,
+        "resource_subtype": "number",
+        "resource_type": "custom_field",
+        "is_formula_field": false,
+        "is_value_read_only": false,
+        "type": "number"
+      }
+    ],
+    "name": "Write Control System Technician page",
+    "projects": [
+      {
+        "gid": "1208998960623214",
+        "resource_type": "project"
+      }
+    ],
+    "first_activity_at": null
   },
   {
     "gid": "1209000331140876",
@@ -1355,7 +1484,8 @@
         "gid": "1208998960623214",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": "2024-12-17T17:44:41.800Z"
   },
   {
     "gid": "1209000331140884",
@@ -1479,7 +1609,8 @@
         "gid": "1208998960623214",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": "2025-10-01T14:41:38.107Z"
   },
   {
     "gid": "1209000336938910",
@@ -1603,7 +1734,8 @@
         "gid": "1208998960623214",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": "2025-03-10T15:42:19.726Z"
   },
   {
     "gid": "1209000336938918",
@@ -1727,7 +1859,8 @@
         "gid": "1208998960623214",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": "2025-08-11T13:47:32.603Z"
   },
   {
     "gid": "1209000336938926",
@@ -1851,7 +1984,8 @@
         "gid": "1208998960623214",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": "2025-10-01T14:41:24.996Z"
   },
   {
     "gid": "1211502426364475",
@@ -1975,7 +2109,8 @@
         "gid": "1208998960623214",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": "2025-09-30T14:56:19.424Z"
   },
   {
     "gid": "1211698027540573",
@@ -2099,7 +2234,8 @@
         "gid": "1208998960623214",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": "2025-10-21T15:00:55.659Z"
   },
   {
     "gid": "1210964090898132",
@@ -2217,7 +2353,8 @@
         "gid": "1208998960623214",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": "2025-08-04T15:51:02.377Z"
   },
   {
     "gid": "1210964089585487",
@@ -2335,7 +2472,8 @@
         "gid": "1208998960623214",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": null
   },
   {
     "gid": "1211794505881589",
@@ -2463,7 +2601,8 @@
         "gid": "1211794504911593",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": "2025-10-30T14:48:08.095Z"
   },
   {
     "gid": "1209000337374438",
@@ -2587,7 +2726,8 @@
         "gid": "1208998960623214",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": "2025-08-18T14:34:36.835Z"
   },
   {
     "gid": "1211142655093586",
@@ -2705,7 +2845,8 @@
         "gid": "1208998960623214",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": "2025-08-25T19:07:08.085Z"
   },
   {
     "gid": "1209000337490549",
@@ -2823,7 +2964,8 @@
         "gid": "1208998960623214",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": null
   },
   {
     "gid": "1209000337490557",
@@ -2941,7 +3083,8 @@
         "gid": "1208998960623214",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": null
   },
   {
     "gid": "1211795753797593",
@@ -3063,7 +3206,8 @@
         "gid": "1211794504911593",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": "2025-10-30T15:01:44.663Z"
   },
   {
     "gid": "1209000099848099",
@@ -3181,7 +3325,8 @@
         "gid": "1208998960623214",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": null
   },
   {
     "gid": "1209000099848107",
@@ -3299,7 +3444,8 @@
         "gid": "1208998960623214",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": null
   },
   {
     "gid": "1211363640099932",
@@ -3417,7 +3563,8 @@
         "gid": "1208998960623214",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": "2025-09-15T16:10:31.180Z"
   },
   {
     "gid": "1211113574559940",
@@ -3535,6 +3682,7 @@
         "gid": "1208998960623214",
         "resource_type": "project"
       }
-    ]
+    ],
+    "first_activity_at": null
   }
 ]
