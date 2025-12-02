@@ -1150,78 +1150,72 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
                 
                 {(() => {
                   // Calculate comprehensive statistics
-                  const durations = sectionComparisonData.map(d => d.duration);
-                  const stats = calculateStatistics(durations);
-                  const statsInWeeks = {
-                    mean: daysToWeeks(stats.mean),
-                    median: daysToWeeks(stats.median),
-                    range: daysToWeeks(stats.range),
-                    skewness: stats.skewness, // Skewness is dimensionless
-                    standardDeviation: daysToWeeks(stats.standardDeviation),
-                    min: daysToWeeks(stats.min || 0),
-                    max: daysToWeeks(stats.max || 0),
-                    count: stats.count
-                  };
+                  // Note: durations are ALREADY in weeks from sectionComparisonData
+                  const durationsInWeeks = sectionComparisonData.map(d => d.duration);
+                  const durationsInDays = sectionComparisonData.map(d => d.originalDuration || d.duration * 7);
+                  
+                  const statsWeeks = calculateStatistics(durationsInWeeks);
+                  const statsDays = calculateStatistics(durationsInDays);
                   
                   return (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                       <div className="bg-gray-800 p-4 rounded-md">
                         <p className="text-sm text-gray-400">Mean Duration</p>
                         <p className="text-2xl font-bold">
-                          {formatNumber(statsInWeeks.mean)} weeks
+                          {formatNumber(statsWeeks.mean)} weeks
                         </p>
                         <p className="text-xs text-gray-500">
-                          ({formatNumber(stats.mean)} days)
+                          ({formatNumber(statsDays.mean)} days)
                         </p>
                       </div>
                       
                       <div className="bg-gray-800 p-4 rounded-md">
                         <p className="text-sm text-gray-400">Median Duration</p>
                         <p className="text-2xl font-bold">
-                          {formatNumber(statsInWeeks.median)} weeks
+                          {formatNumber(statsWeeks.median)} weeks
                         </p>
                         <p className="text-xs text-gray-500">
-                          ({formatNumber(stats.median)} days)
+                          ({formatNumber(statsDays.median)} days)
                         </p>
                       </div>
                       
                       <div className="bg-gray-800 p-4 rounded-md">
                         <p className="text-sm text-gray-400">Range Duration</p>
                         <p className="text-2xl font-bold">
-                          {formatNumber(statsInWeeks.range)} weeks
+                          {formatNumber(statsWeeks.range)} weeks
                         </p>
                         <p className="text-xs text-gray-500">
-                          ({formatNumber(stats.range)} days)
+                          ({formatNumber(statsDays.range)} days)
                         </p>
                       </div>
                       
                       <div className="bg-gray-800 p-4 rounded-md">
                         <p className="text-sm text-gray-400">Skewness</p>
                         <p className="text-2xl font-bold">
-                          {formatNumber(statsInWeeks.skewness, 2)}
+                          {formatNumber(statsWeeks.skewness, 2)}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {stats.skewness > 0 ? 'Right-skewed' : stats.skewness < 0 ? 'Left-skewed' : 'Symmetric'}
+                          {statsWeeks.skewness > 0 ? 'Right-skewed' : statsWeeks.skewness < 0 ? 'Left-skewed' : 'Symmetric'}
                         </p>
                       </div>
                       
                       <div className="bg-gray-800 p-4 rounded-md">
                         <p className="text-sm text-gray-400">Standard Deviation</p>
                         <p className="text-2xl font-bold">
-                          {formatNumber(statsInWeeks.standardDeviation)} weeks
+                          {formatNumber(statsWeeks.standardDeviation)} weeks
                         </p>
                         <p className="text-xs text-gray-500">
-                          ({formatNumber(stats.standardDeviation)} days)
+                          ({formatNumber(statsDays.standardDeviation)} days)
                         </p>
                       </div>
                       
                       <div className="bg-gray-800 p-4 rounded-md">
                         <p className="text-sm text-gray-400">Shortest Duration</p>
                         <p className="text-2xl font-bold">
-                          {statsInWeeks.count > 0 ? `${statsInWeeks.min} weeks` : 'N/A'}
+                          {statsWeeks.count > 0 ? `${formatNumber(statsWeeks.min || 0)} weeks` : 'N/A'}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {stats.count > 0 ? `(${formatNumber(stats.min || 0)} days)` : ''}
+                          {statsDays.count > 0 ? `(${formatNumber(statsDays.min || 0)} days)` : ''}
                         </p>
                         {sectionComparisonData.length > 0 && (
                           <p className="text-xs truncate text-gray-400 mt-1">
@@ -1233,10 +1227,10 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
                       <div className="bg-gray-800 p-4 rounded-md">
                         <p className="text-sm text-gray-400">Longest Duration</p>
                         <p className="text-2xl font-bold">
-                          {statsInWeeks.count > 0 ? `${statsInWeeks.max} weeks` : 'N/A'}
+                          {statsWeeks.count > 0 ? `${formatNumber(statsWeeks.max || 0)} weeks` : 'N/A'}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {stats.count > 0 ? `(${formatNumber(stats.max || 0)} days)` : ''}
+                          {statsDays.count > 0 ? `(${formatNumber(statsDays.max || 0)} days)` : ''}
                         </p>
                         {sectionComparisonData.length > 0 && (
                           <p className="text-xs truncate text-gray-400 mt-1">
@@ -1248,7 +1242,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
                       <div className="bg-gray-800 p-4 rounded-md">
                         <p className="text-sm text-gray-400">Sample Size</p>
                         <p className="text-2xl font-bold">
-                          {statsInWeeks.count} projects
+                          {statsWeeks.count} projects
                         </p>
                         <p className="text-xs text-gray-500">
                           with {selectedSection} data
@@ -1664,7 +1658,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
                 <span className="ml-3 text-gray-400">Loading project timelines...</span>
               </div>
             ) : condensedViewData.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-3 overflow-visible">
                 {condensedViewData.map((project) => {
                   // Calculate the date range for this project's timeline
                   if (!project.overallStart || !project.overallEnd) return null;
@@ -1678,7 +1672,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
                   return (
                     <div 
                       key={project.projectName} 
-                      className="bg-gray-800 rounded-lg p-3 hover:bg-gray-750 transition-colors"
+                      className="bg-gray-800 rounded-lg p-3 hover:bg-gray-750 transition-colors overflow-visible relative"
                     >
                       {/* Project name */}
                       <div className="flex items-center justify-between mb-2">
@@ -1690,8 +1684,8 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
                         </span>
                       </div>
                       
-                      {/* Timeline bar container */}
-                      <div className="relative h-8 bg-gray-700 rounded overflow-hidden">
+                      {/* Timeline bar container - overflow visible for tooltips */}
+                      <div className="relative h-8 bg-gray-700 rounded">
                         {/* Section bars - stacked with overlaps visible */}
                         {project.sections.map((section, sectionIndex) => {
                           if (!section.startDate || !section.endDate) return null;
@@ -1710,7 +1704,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
                           return (
                             <div
                               key={`${project.projectName}-${section.section}`}
-                              className="absolute rounded-sm cursor-pointer transition-opacity hover:opacity-80 group"
+                              className="absolute rounded-sm cursor-pointer transition-opacity hover:opacity-80 group/section"
                               style={{
                                 left: `${Math.max(0, leftPercent)}%`,
                                 width: `${Math.min(100 - leftPercent, Math.max(1, widthPercent))}%`,
@@ -1721,8 +1715,16 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
                               }}
                               title={`${section.section}: ${section.startDate.toLocaleDateString()} - ${section.endDate.toLocaleDateString()} (${Math.round(section.duration)} days)`}
                             >
-                              {/* Tooltip on hover */}
-                              <div className="absolute hidden group-hover:block z-20 bg-gray-900 border border-gray-600 rounded-lg p-3 shadow-xl -top-24 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+                              {/* Tooltip on hover - positioned above with pointer events */}
+                              <div 
+                                className="pointer-events-none absolute hidden group-hover/section:block z-50 bg-gray-900 border border-gray-600 rounded-lg p-3 shadow-xl whitespace-nowrap"
+                                style={{
+                                  bottom: '100%',
+                                  left: '50%',
+                                  transform: 'translateX(-50%)',
+                                  marginBottom: '8px'
+                                }}
+                              >
                                 <p className="font-semibold text-sm" style={{ color: getSectionCategoryColor(section.section) }}>
                                   {section.section}
                                 </p>
@@ -1735,6 +1737,16 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
                                 <p className="text-xs text-gray-400 mt-1">
                                   Duration: {formatDurationInWeeks(section.duration)}
                                 </p>
+                                {/* Arrow pointer */}
+                                <div 
+                                  className="absolute w-0 h-0 left-1/2 -translate-x-1/2"
+                                  style={{
+                                    bottom: '-6px',
+                                    borderLeft: '6px solid transparent',
+                                    borderRight: '6px solid transparent',
+                                    borderTop: '6px solid #4b5563'
+                                  }}
+                                />
                               </div>
                             </div>
                           );
