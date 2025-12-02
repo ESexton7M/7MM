@@ -113,9 +113,8 @@ async function fetchFirstMeaningfulActivity(
         return story.created_at;
       }
       
-      // PRIORITY 3: Assignments - skip if within creation window (likely initial assignment)
+      // PRIORITY 3: Assignments - always meaningful (someone took ownership)
       if (subtype === 'assigned' || text.includes('assigned to') || text.includes('assigned this task')) {
-        if (isWithinCreationWindow) continue;
         return story.created_at;
       }
       
@@ -151,10 +150,9 @@ async function fetchFirstMeaningfulActivity(
         return story.created_at;
       }
       
-      // PRIORITY 7: Subtasks added - skip if within creation window
-      if (subtype === 'subtask_added' || text.includes('added subtask')) {
-        if (isWithinCreationWindow) continue;
-        return story.created_at;
+      // SKIP: All subtask-related activities (they disrupt the scheme)
+      if (subtype === 'subtask_added' || text.includes('subtask')) {
+        continue;
       }
       
       // Skip everything else - be conservative

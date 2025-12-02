@@ -145,9 +145,8 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
           return story.created_at;
         }
         
-        // PRIORITY 3: Assignments - skip if within creation window (likely initial assignment)
+        // PRIORITY 3: Assignments - always meaningful (someone took ownership)
         if (subtype === 'assigned' || text.includes('assigned to') || text.includes('assigned this task')) {
-          if (isWithinCreationWindow) continue;
           console.log(`Task ${taskGid}: Found assignment activity at ${story.created_at}`);
           return story.created_at;
         }
@@ -184,11 +183,9 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
           return story.created_at;
         }
         
-        // PRIORITY 7: Subtasks added - skip if within creation window
-        if (subtype === 'subtask_added' || text.includes('added subtask')) {
-          if (isWithinCreationWindow) continue;
-          console.log(`Task ${taskGid}: Found subtask activity at ${story.created_at}`);
-          return story.created_at;
+        // SKIP: All subtask-related activities (they disrupt the scheme)
+        if (subtype === 'subtask_added' || text.includes('subtask')) {
+          continue;
         }
         
         // Skip everything else - be conservative (no catch-all)
