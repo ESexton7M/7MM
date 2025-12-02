@@ -95,17 +95,19 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
     });
   };
 
-  // Fetch the assignment date from a task's history stories
-  const fetchTaskAssignmentDate = async (taskGid: string, taskName: string): Promise<Date | null> => {
+  // Fetch the first meaningful activity date from a task's history stories
+  // This includes assignments, section moves, due date changes, comments, etc.
+  // Excludes: creation and unassignment events
+  const fetchFirstMeaningfulActivityDate = async (taskGid: string, taskName: string): Promise<Date | null> => {
     if (!token || !apiBase) {
-      console.warn(`Cannot fetch assignment date for task ${taskName}: missing token or apiBase`);
+      console.warn(`Cannot fetch activity date for task ${taskName}: missing token or apiBase`);
       return null;
     }
 
     try {
       console.log(`Fetching stories for task "${taskName}" (GID: ${taskGid})...`);
       const storiesResponse = await fetch(
-        `${apiBase}/tasks/${taskGid}/stories?opt_fields=created_at,resource_type,resource_subtype,text,source`,
+        `${apiBase}/tasks/${taskGid}/stories?opt_fields=created_at,resource_type,resource_subtype,text,source,type`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -124,41 +126,90 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
         console.log(`Story ${index + 1}:`, {
           type: story.resource_type,
           subtype: story.resource_subtype,
-          text: story.text,
+          text: story.text?.substring(0, 100),
           created_at: story.created_at
         });
       });
       
-      // Find the first assignment story - look for various patterns
-      const assignmentStory = storiesData.data.find((story: any) => {
-        // Check resource_subtype first
-        if (story.resource_subtype === 'assigned') {
-          console.log(`Found assignment via resource_subtype for "${taskName}"`);
-          return true;
+      // Find the first MEANINGFUL activity story (excluding creation and unassignment)
+      for (const story of storiesData.data) {
+        if (!story.created_at) continue;
+        
+        const text = (story.text || '').toLowerCase();
+        const subtype = story.resource_subtype || '';
+        
+        // Skip creation stories
+        if (subtype === 'added_to_project') continue;
+        if (text.includes('created this task')) continue;
+        if (text.includes('added this task')) continue;
+        
+        // Skip unassignment stories
+        if (text.includes('unassigned')) continue;
+        if (text.includes('removed assignee')) continue;
+        if (text.includes('removed from')) continue;
+        
+        // Accept any other meaningful activity:
+        
+        // 1. Assignment stories
+        if (subtype === 'assigned' || text.includes('assigned to') || text.includes('assigned this task')) {
+          console.log(`✓ Found assignment activity for "${taskName}": ${story.created_at}`);
+          return new Date(story.created_at);
         }
         
-        // Check text content
-        if (story.text) {
-          const text = story.text.toLowerCase();
-          if (text.includes('assigned to') || 
-              text.includes('assigned this task') ||
-              text.includes('assigned the task') ||
-              text.match(/assigned.*to/)) {
-            console.log(`Found assignment via text pattern for "${taskName}": ${story.text}`);
-            return true;
-          }
+        // 2. Due date changes
+        if (subtype === 'due_date_changed' || text.includes('due date') || text.includes('due on')) {
+          console.log(`✓ Found due date activity for "${taskName}": ${story.created_at}`);
+          return new Date(story.created_at);
         }
         
-        return false;
-      });
-
-      if (assignmentStory && assignmentStory.created_at) {
-        console.log(`✓ Found assignment date for task "${taskName}": ${assignmentStory.created_at}`);
-        return new Date(assignmentStory.created_at);
-      } else {
-        console.warn(`✗ No assignment story found for task "${taskName}" among ${storiesData.data.length} stories`);
-        return null;
+        // 3. Section/column changes
+        if (subtype === 'section_changed' || text.includes('moved this task') || text.includes('moved to')) {
+          console.log(`✓ Found section move activity for "${taskName}": ${story.created_at}`);
+          return new Date(story.created_at);
+        }
+        
+        // 4. Status/completion changes (marked_complete is activity even if later unmarked)
+        if (subtype === 'marked_complete' || subtype === 'marked_incomplete' || text.includes('marked')) {
+          console.log(`✓ Found status change activity for "${taskName}": ${story.created_at}`);
+          return new Date(story.created_at);
+        }
+        
+        // 5. Comments (indicates active work)
+        if (subtype === 'comment_added' || story.type === 'comment') {
+          console.log(`✓ Found comment activity for "${taskName}": ${story.created_at}`);
+          return new Date(story.created_at);
+        }
+        
+        // 6. Attachments
+        if (subtype === 'attachment_added' || text.includes('attached')) {
+          console.log(`✓ Found attachment activity for "${taskName}": ${story.created_at}`);
+          return new Date(story.created_at);
+        }
+        
+        // 7. Description/name changes
+        if (subtype === 'description_changed' || subtype === 'notes_changed' || 
+            subtype === 'name_changed' || text.includes('changed the description') || 
+            text.includes('added the description') || text.includes('changed the name')) {
+          console.log(`✓ Found edit activity for "${taskName}": ${story.created_at}`);
+          return new Date(story.created_at);
+        }
+        
+        // 8. Custom field changes (like Task Progress)
+        if (subtype === 'enum_custom_field_changed' && !text.includes('asana changed')) {
+          // Only count if a person changed it, not Asana automations
+          console.log(`✓ Found custom field activity for "${taskName}": ${story.created_at}`);
+          return new Date(story.created_at);
+        }
+        
+        // 9. Subtask additions
+        if (subtype === 'subtask_added' || text.includes('added subtask')) {
+          console.log(`✓ Found subtask activity for "${taskName}": ${story.created_at}`);
+          return new Date(story.created_at);
+        }
       }
+
+      console.warn(`✗ No meaningful activity found for task "${taskName}" among ${storiesData.data.length} stories`);
+      return null;
     } catch (error) {
       console.error(`Error fetching stories for task ${taskName}:`, error);
       return null;
@@ -353,8 +404,10 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
     
     const fetchSectionData = async () => {
       try {
-        const { getCachedProjects, getCachedProjectTasks } = await import('../utils/asanaCache');
-        const cachedProjects = getCachedProjects();
+        // Use SERVER cache which has first_activity_at data (fetched during analyzeAllProjects)
+        const { getCachedProjects, getCachedProjectTasks } = await import('../utils/serverCache');
+        const cachedProjects = await getCachedProjects();
+        console.log('📦 ComparisonTabs: Using SERVER cache for section data (has first_activity_at)');
         
         // Filter to only completed projects for section comparison
         const completedProjects = filterWebsiteProjectsOnly(projectDurations);
@@ -381,9 +434,14 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
             projectGid = cachedProject.gid;
           }
           
-          // Get tasks for this project
-          const tasks = getCachedProjectTasks(projectGid);
+          // Get tasks for this project (await since serverCache returns Promise)
+          const tasks = await getCachedProjectTasks(projectGid);
           if (!tasks || tasks.length === 0) continue;
+          
+          // Log first task to verify first_activity_at is present
+          if (tasks.length > 0 && tasks[0]) {
+            console.log(`📋 First task in "${project.name}": first_activity_at=${tasks[0].first_activity_at}, assigned_at=${tasks[0].assigned_at}`);
+          }
           
           // Filter for completed tasks in the selected section
           let sectionTasks: Task[] = [];
@@ -492,20 +550,22 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           let assignedDate: Date | undefined = undefined;
           console.log(`DEBUG: Checking first task for "${project.name}" - GID exists: ${!!firstTask.gid}, token exists: ${!!token}, apiBase exists: ${!!apiBase}`);
           
-          // First, check if any task already has an assigned_at field from cache
-          // Find the earliest assigned date across all tasks by sorting chronologically
-          const tasksWithAssignedAt = sortedByCreation
-            .filter(task => task.assigned_at)
+          // First, check if any task already has a first_activity_at or assigned_at field from cache
+          // Find the earliest activity date across all tasks by sorting chronologically
+          const tasksWithActivityDate = sortedByCreation
+            .filter(task => task.first_activity_at || task.assigned_at)
             .sort((a, b) => {
-              // Compare ISO date strings directly for efficiency
-              const dateA = a.assigned_at!;
-              const dateB = b.assigned_at!;
+              // Use first_activity_at if available, otherwise fall back to assigned_at
+              const dateA = a.first_activity_at || a.assigned_at!;
+              const dateB = b.first_activity_at || b.assigned_at!;
               return dateA.localeCompare(dateB);
             });
           
-          if (tasksWithAssignedAt.length > 0) {
-            assignedDate = new Date(tasksWithAssignedAt[0].assigned_at!);
-            console.log(`✓ Using earliest cached assigned_at from task "${tasksWithAssignedAt[0].name}": ${assignedDate.toISOString()}`);
+          if (tasksWithActivityDate.length > 0 && tasksWithActivityDate[0]) {
+            const firstTaskWithActivity = tasksWithActivityDate[0];
+            const activityDate = firstTaskWithActivity.first_activity_at || firstTaskWithActivity.assigned_at!;
+            assignedDate = new Date(activityDate);
+            console.log(`✓ Using earliest cached activity date from task "${firstTaskWithActivity.name}": ${assignedDate.toISOString()}`);
           }
           
           // If no cached assigned_at found, fetch from task stories
@@ -514,7 +574,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
             console.log(`First task: "${firstTask.name}" (GID: ${firstTask.gid})`);
             
             // Try to get assignment date from first task
-            let tempAssignedDate = await fetchTaskAssignmentDate(firstTask.gid, firstTask.name || 'unknown');
+            let tempAssignedDate = await fetchFirstMeaningfulActivityDate(firstTask.gid, firstTask.name || 'unknown');
             
             // If not found, try subsequent tasks until we find one
             if (!tempAssignedDate && sortedByCreation.length > 1) {
@@ -523,7 +583,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
                 const nextTask = sortedByCreation[i];
                 if (nextTask && nextTask.gid) {
                   console.log(`Trying task ${i + 1}: "${nextTask.name}"`);
-                  tempAssignedDate = await fetchTaskAssignmentDate(nextTask.gid, nextTask.name || 'unknown');
+                  tempAssignedDate = await fetchFirstMeaningfulActivityDate(nextTask.gid, nextTask.name || 'unknown');
                   if (tempAssignedDate) {
                     console.log(`✓ Found assignment date from task ${i + 1}: ${tempAssignedDate.toISOString()}`);
                     break;

@@ -644,6 +644,7 @@ export default function App() {
                     
                     if (!projectTasks) {
                         // Fetch tasks if not in cache
+                        console.log(`🔄 App.tsx: Fetching tasks from Asana API for project "${project.name}"...`);
                         const tasksResponse = await fetch(`${ASANA_API_BASE}/tasks?project=${project.gid}&opt_fields=created_at,completed,completed_at,name,custom_fields,projects&limit=100`, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
@@ -652,24 +653,33 @@ export default function App() {
                             const tasksResult = await tasksResponse.json();
                             projectTasks = tasksResult.data || [];
                             needsActivityFetch = true; // New tasks need activity dates
+                            console.log(`✅ App.tsx: Fetched ${(projectTasks || []).length} tasks for "${project.name}"`);
                         } else {
-                            console.warn(`Could not fetch tasks for project ${project.name}: ${tasksResponse.statusText}`);
+                            console.warn(`❌ Could not fetch tasks for project ${project.name}: ${tasksResponse.statusText}`);
                             projectTasks = [];
                         }
                     } else {
+                        console.log(`📦 App.tsx: Using ${projectTasks.length} cached tasks for "${project.name}"`);
                         // Check if cached tasks already have first_activity_at
                         // If not, we need to fetch it
                         const tasksNeedingActivity = projectTasks.filter((t: Task) => 
                             t.first_activity_at === undefined
                         );
                         needsActivityFetch = tasksNeedingActivity.length > 0;
+                        if (needsActivityFetch) {
+                            console.log(`⚠️ App.tsx: ${tasksNeedingActivity.length} tasks need activity dates in "${project.name}"`);
+                        } else {
+                            console.log(`✅ App.tsx: All tasks in "${project.name}" already have activity dates`);
+                        }
                     }
                     
                     // Fetch first activity dates for tasks that don't have them
                     if (needsActivityFetch && projectTasks && projectTasks.length > 0) {
-                        console.log(`Fetching activity dates for ${projectTasks.length} tasks in project "${project.name}"...`);
+                        console.log(`🔄 App.tsx: Fetching activity dates for ${projectTasks.length} tasks in project "${project.name}"...`);
                         
                         // Fetch activity dates for each task
+                        let fetchedCount = 0;
+                        let foundCount = 0;
                         const tasksWithActivity = await Promise.all(
                             (projectTasks as Task[]).map(async (task: Task) => {
                                 // Skip if already has activity date
@@ -677,7 +687,10 @@ export default function App() {
                                     return task;
                                 }
                                 
+                                fetchedCount++;
                                 const activityDate = await fetchFirstMeaningfulActivity(task.gid, ASANA_API_BASE, token);
+                                if (activityDate) foundCount++;
+                                
                                 return {
                                     ...task,
                                     first_activity_at: activityDate
@@ -686,10 +699,11 @@ export default function App() {
                         );
                         
                         projectTasks = tasksWithActivity;
+                        console.log(`✅ App.tsx: Fetched activity for ${fetchedCount} tasks, found dates for ${foundCount} in "${project.name}"`);
                         
                         // Cache the updated tasks with activity dates
                         await cacheProjectTasks(project.gid, projectTasks as Task[]);
-                        console.log(`Cached tasks with activity dates for project "${project.name}"`);
+                        console.log(`💾 App.tsx: Cached ${(projectTasks as Task[]).length} tasks with activity dates for "${project.name}"`);
                     }
                     
                     allTasksResults.push({

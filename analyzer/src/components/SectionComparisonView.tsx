@@ -181,9 +181,10 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
     setError('');
     
     try {
-      const { getCachedProjects, getCachedProjectTasks } = await import('../utils/asanaCache');
-      const cachedProjects = getCachedProjects();
-      console.log('Found', cachedProjects.length, 'cached projects');
+      // Use SERVER cache which has first_activity_at data (fetched during analyzeAllProjects)
+      const { getCachedProjects, getCachedProjectTasks } = await import('../utils/serverCache');
+      const cachedProjects = await getCachedProjects();
+      console.log('📦 SectionComparisonView: Using SERVER cache - Found', cachedProjects.length, 'cached projects');
       
       // Store section data for each project
       const allProjectData: ProjectSectionData[] = [];
@@ -200,11 +201,16 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
           projectGid = cachedProject.gid;
         }
         
-        // Get tasks for this project
-        const tasks = getCachedProjectTasks(projectGid);
+        // Get tasks for this project (await since serverCache returns Promise)
+        const tasks = await getCachedProjectTasks(projectGid);
         if (!tasks || tasks.length === 0) {
           console.warn(`No tasks found for project ${project.name} (${projectGid})`);
           continue;
+        }
+        
+        // Log first task to verify first_activity_at is present
+        if (tasks.length > 0 && tasks[0]) {
+          console.log(`📋 SectionComparisonView: First task in "${project.name}": first_activity_at=${tasks[0].first_activity_at}`);
         }
         
         console.log(`Processing ${tasks.length} tasks for project "${project.name}" (${projectGid})`);
