@@ -25,6 +25,7 @@ export interface Task {
   start_at?: string | null;
   start_on?: string | null;
   assigned_at?: string | null; // When task was first assigned
+  first_activity_at?: string | null; // When first meaningful activity occurred (assignment, section move, etc.)
 }
 
 // Project analytics statistics

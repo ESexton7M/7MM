@@ -374,41 +374,77 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
           
           console.log(`Found ${mainTasks.length} main tasks out of ${tasks.length} total tasks in "${section}"`);
           
-          // IMPORTANT: Fetch first meaningful activity dates for all tasks in this section
-          // This gives us when work actually started on each task (not just when it was created)
-          console.log(`Fetching activity dates for ${tasksToUse.length} tasks in section "${section}"...`);
+          // OPTIMIZED: First, sort tasks by creation date to find the earliest ones first
+          // Then check for activity dates - once we find one, we can stop for this section
+          const sortedByCreation = [...tasksToUse].sort((a, b) => 
+            new Date(a.created_at || '9999').getTime() - new Date(b.created_at || '9999').getTime()
+          );
           
-          // Collect activity dates for each task
-          const taskActivityDates: { task: Task; activityDate: Date; source: string }[] = [];
+          // Collect activity dates - prioritize cached first_activity_at, then fetch if needed
+          // OPTIMIZATION: Stop once we find a valid activity date (we only need the earliest)
+          let earliestActivityDate: Date | null = null;
+          let earliestActivityTask: Task | null = null;
+          let activitySource = 'created';
           
-          for (const task of tasksToUse) {
-            // Try to get the first meaningful activity date
-            const activityDateStr = await fetchFirstMeaningfulActivity(task.gid);
+          console.log(`Looking for first activity date in section "${section}"...`);
+          
+          for (const task of sortedByCreation) {
+            // First check if task has cached first_activity_at
+            if (task.first_activity_at) {
+              const activityDate = new Date(task.first_activity_at);
+              if (!earliestActivityDate || activityDate < earliestActivityDate) {
+                earliestActivityDate = activityDate;
+                earliestActivityTask = task;
+                activitySource = 'cached_activity';
+              }
+              // If we found an activity date and it's from the earliest created task, 
+              // we can stop - no earlier task exists
+              if (task === sortedByCreation[0]) {
+                console.log(`Found cached activity date for earliest task "${task.name}" - stopping search`);
+                break;
+              }
+            } else {
+              // No cached activity, try to fetch it
+              const activityDateStr = await fetchFirstMeaningfulActivity(task.gid);
+              
+              if (activityDateStr) {
+                const activityDate = new Date(activityDateStr);
+                if (!earliestActivityDate || activityDate < earliestActivityDate) {
+                  earliestActivityDate = activityDate;
+                  earliestActivityTask = task;
+                  activitySource = 'fetched_activity';
+                }
+                // If this is the earliest created task and has activity, we're done
+                if (task === sortedByCreation[0]) {
+                  console.log(`Found fetched activity date for earliest task "${task.name}" - stopping search`);
+                  break;
+                }
+              }
+            }
             
-            if (activityDateStr) {
-              taskActivityDates.push({
-                task,
-                activityDate: new Date(activityDateStr),
-                source: 'activity'
-              });
-            } else if (task.created_at) {
-              // Fallback to creation date if no meaningful activity found
-              taskActivityDates.push({
-                task,
-                activityDate: new Date(task.created_at),
-                source: 'created'
-              });
+            // OPTIMIZATION: If we've checked the earliest few tasks and found an activity date,
+            // and the remaining tasks were created AFTER our earliest activity date, we can stop
+            if (earliestActivityDate && task.created_at) {
+              const taskCreatedDate = new Date(task.created_at);
+              if (taskCreatedDate > earliestActivityDate) {
+                console.log(`Remaining tasks created after earliest activity date - stopping search`);
+                break;
+              }
             }
           }
           
-          // Sort by activity date to find the earliest
-          taskActivityDates.sort((a, b) => a.activityDate.getTime() - b.activityDate.getTime());
+          // Fallback: if no activity date found, use earliest creation date
+          if (!earliestActivityDate && sortedByCreation.length > 0) {
+            const firstTask = sortedByCreation[0];
+            if (firstTask?.created_at) {
+              earliestActivityDate = new Date(firstTask.created_at);
+              earliestActivityTask = firstTask;
+              activitySource = 'created';
+              console.log(`No activity found, using creation date of "${firstTask.name}"`);
+            }
+          }
           
-          // Log the activity dates for debugging
-          console.log(`Activity dates for section "${section}" in "${project.name}":`);
-          taskActivityDates.slice(0, 5).forEach(({ task, activityDate, source }) => {
-            console.log(`  - "${task.name}": ${activityDate.toISOString().slice(0, 10)} (${source})`);
-          });
+          console.log(`Section "${section}" first activity: "${earliestActivityTask?.name}" on ${earliestActivityDate?.toISOString().slice(0, 10)} (${activitySource})`);
           
           // Get completion dates for sorting
           const sortedByCompletion = [...tasksToUse]
@@ -418,23 +454,17 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
             );
           
           // Safety check - make sure we have data
-          if (taskActivityDates.length === 0) {
+          if (!earliestActivityDate) {
             console.warn(`No valid tasks for section "${section}" in project "${project.name}"`);
             continue;
           }
           
-          // Get first activity date and last completion date
-          const firstActivityData = taskActivityDates[0];
+          // Get last completion date
           const lastTask = sortedByCompletion.length > 0 
             ? sortedByCompletion[sortedByCompletion.length - 1]
             : null;
           
-          if (!firstActivityData) {
-            console.warn(`No activity data for section "${section}" in project "${project.name}"`);
-            continue;
-          }
-          
-          const firstTaskDate = firstActivityData.activityDate;
+          const firstTaskDate = earliestActivityDate;
           let actualLastTaskDate = lastTask?.completed_at ? new Date(lastTask.completed_at) : new Date();
           
           // IMPORTANT: Don't use the project's launch date for non-launch sections
@@ -479,7 +509,7 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
           }
           
           // Print task details for debugging
-          console.log(`First activity in ${section}: "${firstActivityData.task.name}" on ${firstTaskDate.toISOString()} (source: ${firstActivityData.source})`);
+          console.log(`First activity in ${section}: "${earliestActivityTask?.name || 'N/A'}" on ${firstTaskDate.toISOString()} (source: ${activitySource})`);
           console.log(`Last task in ${section}: "${lastTask?.name || 'N/A'}" completed on ${actualLastTaskDate.toISOString()}`);
 
           // Check if this section is still in progress (has incomplete tasks)

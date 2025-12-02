@@ -26,6 +26,89 @@ import type {
 // Import environment utilities
 import { loadEnvConfig } from './utils/env';
 
+/**
+ * Fetch task stories and find the first meaningful activity date.
+ * Meaningful activity includes:
+ * - Assignment to someone
+ * - Section changes
+ * - Status updates
+ * - Comments (indicates work is happening)
+ * - Due date changes
+ * - Attachments added
+ * 
+ * Excludes:
+ * - Task creation (we want post-creation activity)
+ * - Unassignment (task being removed from someone)
+ * - System-generated stories
+ */
+async function fetchFirstMeaningfulActivity(
+  taskGid: string, 
+  apiBase: string, 
+  token: string
+): Promise<string | null> {
+  try {
+    const storiesResponse = await fetch(
+      `${apiBase}/tasks/${taskGid}/stories?opt_fields=created_at,resource_type,resource_subtype,text,type`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    
+    if (!storiesResponse.ok) return null;
+    
+    const storiesData = await storiesResponse.json();
+    const stories = storiesData.data || [];
+    
+    // Find the first story that represents meaningful activity
+    for (const story of stories) {
+      if (!story.created_at) continue;
+      
+      const text = (story.text || '').toLowerCase();
+      const subtype = story.resource_subtype || '';
+      
+      // Skip creation stories
+      if (subtype === 'added_to_project' && text.includes('added this task')) continue;
+      if (text.includes('created this task')) continue;
+      
+      // Skip unassignment stories
+      if (text.includes('unassigned') || text.includes('removed assignee')) continue;
+      if (text.includes('removed from')) continue;
+      
+      // Accept meaningful activities
+      if (text.includes('assigned to') || text.includes('assigned this task') || subtype === 'assigned') {
+        return story.created_at;
+      }
+      if (text.includes('moved this task') || text.includes('moved to') || subtype === 'section_changed') {
+        return story.created_at;
+      }
+      if (text.includes('due date') || text.includes('due on') || subtype === 'due_date_changed') {
+        return story.created_at;
+      }
+      if (text.includes('marked') || text.includes('completed') || subtype === 'marked_complete' || subtype === 'marked_incomplete') {
+        return story.created_at;
+      }
+      if (subtype === 'comment_added' || story.type === 'comment') {
+        return story.created_at;
+      }
+      if (text.includes('attached') || subtype === 'attachment_added') {
+        return story.created_at;
+      }
+      if (text.includes('added subtask') || subtype === 'subtask_added') {
+        return story.created_at;
+      }
+      if (text.includes('changed the description') || subtype === 'description_changed') {
+        return story.created_at;
+      }
+      if (text.includes('changed the name') || subtype === 'name_changed') {
+        return story.created_at;
+      }
+    }
+    
+    return null;
+  } catch (err) {
+    console.warn(`Could not fetch stories for task ${taskGid}:`, err);
+    return null;
+  }
+}
+
 
 // --- Main App Component ---
 export default function App() {
@@ -557,6 +640,7 @@ export default function App() {
                 try {
                     // First check the cache for this project's tasks
                     let projectTasks = await getCachedProjectTasks(project.gid);
+                    let needsActivityFetch = false;
                     
                     if (!projectTasks) {
                         // Fetch tasks if not in cache
@@ -567,12 +651,45 @@ export default function App() {
                         if (tasksResponse.ok) {
                             const tasksResult = await tasksResponse.json();
                             projectTasks = tasksResult.data || [];
-                            // Cache these tasks
-                            await cacheProjectTasks(project.gid, projectTasks as Task[]);
+                            needsActivityFetch = true; // New tasks need activity dates
                         } else {
                             console.warn(`Could not fetch tasks for project ${project.name}: ${tasksResponse.statusText}`);
                             projectTasks = [];
                         }
+                    } else {
+                        // Check if cached tasks already have first_activity_at
+                        // If not, we need to fetch it
+                        const tasksNeedingActivity = projectTasks.filter((t: Task) => 
+                            t.first_activity_at === undefined
+                        );
+                        needsActivityFetch = tasksNeedingActivity.length > 0;
+                    }
+                    
+                    // Fetch first activity dates for tasks that don't have them
+                    if (needsActivityFetch && projectTasks && projectTasks.length > 0) {
+                        console.log(`Fetching activity dates for ${projectTasks.length} tasks in project "${project.name}"...`);
+                        
+                        // Fetch activity dates for each task
+                        const tasksWithActivity = await Promise.all(
+                            (projectTasks as Task[]).map(async (task: Task) => {
+                                // Skip if already has activity date
+                                if (task.first_activity_at !== undefined) {
+                                    return task;
+                                }
+                                
+                                const activityDate = await fetchFirstMeaningfulActivity(task.gid, ASANA_API_BASE, token);
+                                return {
+                                    ...task,
+                                    first_activity_at: activityDate
+                                };
+                            })
+                        );
+                        
+                        projectTasks = tasksWithActivity;
+                        
+                        // Cache the updated tasks with activity dates
+                        await cacheProjectTasks(project.gid, projectTasks as Task[]);
+                        console.log(`Cached tasks with activity dates for project "${project.name}"`);
                     }
                     
                     allTasksResults.push({
