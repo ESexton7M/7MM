@@ -123,22 +123,17 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
       const storiesData = await storiesResponse.json();
       console.log(`Retrieved ${storiesData.data.length} stories for task "${taskName}"`);
       
-      // Log all stories to see what we're working with
-      storiesData.data.forEach((story: any, index: number) => {
-        console.log(`Story ${index + 1}:`, {
-          type: story.resource_type,
-          subtype: story.resource_subtype,
-          text: story.text?.substring(0, 100),
-          created_at: story.created_at
-        });
-      });
+      // Find the first MEANINGFUL activity story
+      // PRIORITY: Comments > Assignments > In Progress status > Section moves to active sections
+      // EXCLUDED: Creation, unassignment, "not started", due date changes
       
-      // Find the first MEANINGFUL activity story (excluding creation and unassignment)
       for (const story of storiesData.data) {
         if (!story.created_at) continue;
         
         const text = (story.text || '').toLowerCase();
         const subtype = story.resource_subtype || '';
+        
+        // === SKIP these story types (not meaningful activity) ===
         
         // Skip creation stories
         if (subtype === 'added_to_project') continue;
@@ -150,71 +145,88 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
         if (text.includes('removed assignee')) continue;
         if (text.includes('removed from')) continue;
         
-        // Accept any other meaningful activity:
+        // Skip "Not Started" status changes
+        if (text.includes('not started')) continue;
+        if (text.includes('to do')) continue;
+        if (text.includes('backlog')) continue;
         
-        // 1. Assignment stories
-        if (subtype === 'assigned' || text.includes('assigned to') || text.includes('assigned this task')) {
-          console.log(`✓ Found assignment activity for "${taskName}": ${story.created_at}`);
-          return new Date(story.created_at);
-        }
+        // Skip due date changes (can happen before work starts)
+        if (subtype === 'due_date_changed') continue;
+        if (text.includes('changed the due date')) continue;
+        if (text.includes('set the due date')) continue;
         
-        // 2. Due date changes
-        if (subtype === 'due_date_changed' || text.includes('due date') || text.includes('due on')) {
-          console.log(`✓ Found due date activity for "${taskName}": ${story.created_at}`);
-          return new Date(story.created_at);
-        }
+        // Skip name/description changes (often happen at creation)
+        if (subtype === 'name_changed' || subtype === 'description_changed' || subtype === 'notes_changed') continue;
         
-        // 3. Section/column changes
-        if (subtype === 'section_changed' || text.includes('moved this task') || text.includes('moved to')) {
-          console.log(`✓ Found section move activity for "${taskName}": ${story.created_at}`);
-          return new Date(story.created_at);
-        }
+        // === ACCEPT these story types (meaningful activity) ===
         
-        // 4. Status/completion changes (marked_complete is activity even if later unmarked)
-        if (subtype === 'marked_complete' || subtype === 'marked_incomplete' || text.includes('marked')) {
-          console.log(`✓ Found status change activity for "${taskName}": ${story.created_at}`);
-          return new Date(story.created_at);
-        }
-        
-        // 5. Comments (indicates active work)
+        // PRIORITY 1: Comments - strongest signal of actual work
         if (subtype === 'comment_added' || story.type === 'comment') {
-          console.log(`✓ Found comment activity for "${taskName}": ${story.created_at}`);
+          console.log(`✓ Found COMMENT activity for "${taskName}": ${story.created_at}`);
           return new Date(story.created_at);
         }
         
-        // 6. Attachments
+        // PRIORITY 2: Assignments - someone took ownership
+        if (subtype === 'assigned' || text.includes('assigned to') || text.includes('assigned this task')) {
+          console.log(`✓ Found ASSIGNMENT activity for "${taskName}": ${story.created_at}`);
+          return new Date(story.created_at);
+        }
+        
+        // PRIORITY 3: "In Progress" or active status changes
+        if (subtype === 'enum_custom_field_changed') {
+          // Check for progress field changes to active states
+          if (text.includes('in progress') || 
+              text.includes('in review') || 
+              text.includes('working') ||
+              text.includes('started') ||
+              text.includes('active')) {
+            console.log(`✓ Found IN PROGRESS status for "${taskName}": ${story.created_at}`);
+            return new Date(story.created_at);
+          }
+          // Skip if it's "not started" or similar inactive states
+          continue;
+        }
+        
+        // PRIORITY 4: Section moves to active sections
+        if (subtype === 'section_changed' || text.includes('moved this task') || text.includes('moved to')) {
+          // Skip moves to backlog/inbox/not started sections
+          if (text.includes('backlog') || text.includes('inbox') || text.includes('not started')) {
+            continue;
+          }
+          // Check if moved to an active section
+          if (text.includes('in progress') || 
+              text.includes('development') || 
+              text.includes('mockup') ||
+              text.includes('design') ||
+              text.includes('review') ||
+              text.includes('launch')) {
+            console.log(`✓ Found SECTION MOVE to active section for "${taskName}": ${story.created_at}`);
+            return new Date(story.created_at);
+          }
+          // Accept other section moves as they likely indicate work
+          console.log(`✓ Found SECTION MOVE for "${taskName}": ${story.created_at}`);
+          return new Date(story.created_at);
+        }
+        
+        // PRIORITY 5: Marked complete/incomplete (definitely worked on)
+        if (subtype === 'marked_complete' || subtype === 'marked_incomplete') {
+          console.log(`✓ Found COMPLETION status for "${taskName}": ${story.created_at}`);
+          return new Date(story.created_at);
+        }
+        
+        // PRIORITY 6: Attachments (someone added work product)
         if (subtype === 'attachment_added' || text.includes('attached')) {
-          console.log(`✓ Found attachment activity for "${taskName}": ${story.created_at}`);
+          console.log(`✓ Found ATTACHMENT activity for "${taskName}": ${story.created_at}`);
           return new Date(story.created_at);
         }
         
-        // 7. Description/name changes
-        if (subtype === 'description_changed' || subtype === 'notes_changed' || 
-            subtype === 'name_changed' || text.includes('changed the description') || 
-            text.includes('added the description') || text.includes('changed the name')) {
-          console.log(`✓ Found edit activity for "${taskName}": ${story.created_at}`);
-          return new Date(story.created_at);
-        }
-        
-        // 8. Custom field changes (like Task Progress)
-        if (subtype === 'enum_custom_field_changed' && !text.includes('asana changed')) {
-          // Only count if a person changed it, not Asana automations
-          console.log(`✓ Found custom field activity for "${taskName}": ${story.created_at}`);
-          return new Date(story.created_at);
-        }
-        
-        // 9. Subtask additions
+        // PRIORITY 7: Subtasks added (work breakdown happened)
         if (subtype === 'subtask_added' || text.includes('added subtask')) {
-          console.log(`✓ Found subtask activity for "${taskName}": ${story.created_at}`);
+          console.log(`✓ Found SUBTASK activity for "${taskName}": ${story.created_at}`);
           return new Date(story.created_at);
         }
         
-        // 10. CATCH-ALL: Any other story that isn't creation/unassignment is activity
-        // This catches edge cases we might have missed
-        if (story.resource_type === 'story' && subtype && subtype !== 'added_to_project') {
-          console.log(`✓ Found other activity (${subtype}) for "${taskName}": ${story.created_at}`);
-          return new Date(story.created_at);
-        }
+        // Skip everything else - be conservative (no catch-all)
       }
 
       console.warn(`✗ No meaningful activity found for task "${taskName}" among ${storiesData.data.length} stories`);

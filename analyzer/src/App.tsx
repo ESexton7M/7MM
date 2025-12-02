@@ -28,18 +28,19 @@ import { loadEnvConfig } from './utils/env';
 
 /**
  * Fetch task stories and find the first meaningful activity date.
- * Meaningful activity includes:
- * - Assignment to someone
- * - Section changes
- * - Status updates
- * - Comments (indicates work is happening)
- * - Due date changes
- * - Attachments added
  * 
- * Excludes:
- * - Task creation (we want post-creation activity)
- * - Unassignment (task being removed from someone)
+ * PRIORITY ORDER (highest first):
+ * 1. Comments - strongest signal of actual work
+ * 2. Assignments - someone took ownership
+ * 3. "In Progress" status changes - work started
+ * 4. Section moves to active sections - work started
+ * 
+ * EXCLUDED:
+ * - Task creation / "added to project"
+ * - Unassignment
+ * - "Not Started" status changes
  * - System-generated stories
+ * - Due date changes (can happen before work starts)
  */
 async function fetchFirstMeaningfulActivity(
   taskGid: string, 
@@ -64,48 +65,91 @@ async function fetchFirstMeaningfulActivity(
       const text = (story.text || '').toLowerCase();
       const subtype = story.resource_subtype || '';
       
+      // === SKIP these story types (not meaningful activity) ===
+      
       // Skip creation stories
-      if (subtype === 'added_to_project' && text.includes('added this task')) continue;
+      if (subtype === 'added_to_project') continue;
       if (text.includes('created this task')) continue;
+      if (text.includes('added this task')) continue;
       
       // Skip unassignment stories
       if (text.includes('unassigned') || text.includes('removed assignee')) continue;
       if (text.includes('removed from')) continue;
       
-      // Accept meaningful activities
-      if (text.includes('assigned to') || text.includes('assigned this task') || subtype === 'assigned') {
-        return story.created_at;
-      }
-      if (text.includes('moved this task') || text.includes('moved to') || subtype === 'section_changed') {
-        return story.created_at;
-      }
-      if (text.includes('due date') || text.includes('due on') || subtype === 'due_date_changed') {
-        return story.created_at;
-      }
-      if (text.includes('marked') || text.includes('completed') || subtype === 'marked_complete' || subtype === 'marked_incomplete') {
-        return story.created_at;
-      }
+      // Skip "Not Started" status changes
+      if (text.includes('not started')) continue;
+      if (text.includes('to do')) continue;
+      if (text.includes('backlog')) continue;
+      
+      // Skip due date changes (can happen before work starts)
+      if (subtype === 'due_date_changed') continue;
+      if (text.includes('changed the due date')) continue;
+      if (text.includes('set the due date')) continue;
+      
+      // Skip name/description changes at creation time
+      if (subtype === 'name_changed' || subtype === 'description_changed' || subtype === 'notes_changed') continue;
+      
+      // === ACCEPT these story types (meaningful activity) ===
+      
+      // PRIORITY 1: Comments - strongest signal of actual work happening
       if (subtype === 'comment_added' || story.type === 'comment') {
         return story.created_at;
       }
-      if (text.includes('attached') || subtype === 'attachment_added') {
-        return story.created_at;
-      }
-      if (text.includes('added subtask') || subtype === 'subtask_added') {
-        return story.created_at;
-      }
-      if (text.includes('changed the description') || subtype === 'description_changed') {
-        return story.created_at;
-      }
-      if (text.includes('changed the name') || subtype === 'name_changed') {
+      
+      // PRIORITY 2: Assignments - someone took ownership
+      if (subtype === 'assigned' || text.includes('assigned to') || text.includes('assigned this task')) {
         return story.created_at;
       }
       
-      // CATCH-ALL: Any other story that isn't creation/unassignment is activity
-      // This catches edge cases we might have missed
-      if (story.resource_type === 'story' && subtype && subtype !== 'added_to_project') {
+      // PRIORITY 3: "In Progress" or active status changes
+      if (subtype === 'enum_custom_field_changed') {
+        // Check for progress field changes to active states
+        if (text.includes('in progress') || 
+            text.includes('in review') || 
+            text.includes('working') ||
+            text.includes('started') ||
+            text.includes('active')) {
+          return story.created_at;
+        }
+        // Skip if it's "not started" or similar inactive states
+        continue;
+      }
+      
+      // PRIORITY 4: Section moves to active sections (not just any move)
+      if (subtype === 'section_changed' || text.includes('moved this task') || text.includes('moved to')) {
+        // Check if moved to an active section
+        if (text.includes('in progress') || 
+            text.includes('development') || 
+            text.includes('mockup') ||
+            text.includes('design') ||
+            text.includes('review') ||
+            text.includes('launch')) {
+          return story.created_at;
+        }
+        // Skip moves to backlog/inbox/not started sections
+        if (text.includes('backlog') || text.includes('inbox') || text.includes('not started')) {
+          continue;
+        }
+        // Accept other section moves as they likely indicate work
         return story.created_at;
       }
+      
+      // PRIORITY 5: Marked complete/incomplete (definitely worked on)
+      if (subtype === 'marked_complete' || subtype === 'marked_incomplete') {
+        return story.created_at;
+      }
+      
+      // PRIORITY 6: Attachments (someone added work product)
+      if (subtype === 'attachment_added' || text.includes('attached')) {
+        return story.created_at;
+      }
+      
+      // PRIORITY 7: Subtasks added (work breakdown happened)
+      if (subtype === 'subtask_added' || text.includes('added subtask')) {
+        return story.created_at;
+      }
+      
+      // Skip everything else - be conservative
     }
     
     return null;
