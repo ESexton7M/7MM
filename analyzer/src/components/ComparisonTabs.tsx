@@ -812,6 +812,31 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           
           if (sectionDataList.length === 0) continue;
           
+          // FAILSAFE: Cap all section end dates to not exceed Launch section end date
+          // Sections shouldn't extend past the project launch
+          const launchSection = sectionDataList.find(s => s.section === 'Launch');
+          if (launchSection && launchSection.endDate) {
+            const launchEndDate = launchSection.endDate;
+            
+            for (const section of sectionDataList) {
+              if (section.section !== 'Launch' && section.endDate && section.endDate > launchEndDate) {
+                console.log(`Capping ${section.section} end date from ${section.endDate.toLocaleDateString()} to Launch date ${launchEndDate.toLocaleDateString()} for ${project.name}`);
+                section.endDate = new Date(launchEndDate);
+                
+                // If start date is also after launch, cap it too (shouldn't happen, but be safe)
+                if (section.startDate && section.startDate > launchEndDate) {
+                  section.startDate = new Date(launchEndDate);
+                }
+                
+                // Recalculate duration
+                if (section.startDate) {
+                  const newDuration = (section.endDate.getTime() - section.startDate.getTime()) / (1000 * 60 * 60 * 24);
+                  section.duration = Math.max(1, newDuration);
+                }
+              }
+            }
+          }
+          
           // Calculate overall project dates
           const allStarts = sectionDataList.filter(s => s.startDate).map(s => s.startDate!.getTime());
           const allEnds = sectionDataList.filter(s => s.endDate).map(s => s.endDate!.getTime());
