@@ -31,9 +31,10 @@ import { loadEnvConfig } from './utils/env';
  * 
  * PRIORITY ORDER (highest first):
  * 1. Comments - strongest signal of actual work
- * 2. Assignments - someone took ownership
- * 3. "In Progress" status changes - work started
- * 4. Section moves to active sections - work started
+ * 2. Marked complete/incomplete - definitely worked on
+ * 3. Assignments - someone took ownership (only if >5min after creation)
+ * 4. "In Progress" status changes - work started
+ * 5. Section moves to active sections (only if >5min after creation)
  * 
  * EXCLUDED:
  * - Task creation / "added to project"
@@ -41,12 +42,17 @@ import { loadEnvConfig } from './utils/env';
  * - "Not Started" status changes
  * - System-generated stories
  * - Due date changes (can happen before work starts)
+ * - Any activity within 5 minutes of creation (likely initial setup)
  */
 async function fetchFirstMeaningfulActivity(
   taskGid: string, 
   apiBase: string, 
-  token: string
+  token: string,
+  taskCreatedAt?: string  // Pass task creation date to filter out creation-adjacent activities
 ): Promise<string | null> {
+  // Minimum time after creation (5 minutes) before we consider activity as "real work"
+  const CREATION_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+  
   try {
     const storiesResponse = await fetch(
       `${apiBase}/tasks/${taskGid}/stories?opt_fields=created_at,resource_type,resource_subtype,text,type`,
@@ -58,12 +64,18 @@ async function fetchFirstMeaningfulActivity(
     const storiesData = await storiesResponse.json();
     const stories = storiesData.data || [];
     
+    const taskCreationTime = taskCreatedAt ? new Date(taskCreatedAt).getTime() : 0;
+    
     // Find the first story that represents meaningful activity
     for (const story of stories) {
       if (!story.created_at) continue;
       
+      const storyTime = new Date(story.created_at).getTime();
       const text = (story.text || '').toLowerCase();
       const subtype = story.resource_subtype || '';
+      
+      // Check if this activity is within the creation window (likely setup, not work)
+      const isWithinCreationWindow = taskCreationTime > 0 && (storyTime - taskCreationTime) < CREATION_WINDOW_MS;
       
       // === SKIP these story types (not meaningful activity) ===
       
@@ -91,17 +103,23 @@ async function fetchFirstMeaningfulActivity(
       
       // === ACCEPT these story types (meaningful activity) ===
       
-      // PRIORITY 1: Comments - strongest signal of actual work happening
+      // PRIORITY 1: Comments - ALWAYS meaningful, even within creation window
       if (subtype === 'comment_added' || story.type === 'comment') {
         return story.created_at;
       }
       
-      // PRIORITY 2: Assignments - someone took ownership
-      if (subtype === 'assigned' || text.includes('assigned to') || text.includes('assigned this task')) {
+      // PRIORITY 2: Marked complete/incomplete - ALWAYS meaningful
+      if (subtype === 'marked_complete' || subtype === 'marked_incomplete') {
         return story.created_at;
       }
       
-      // PRIORITY 3: "In Progress" or active status changes
+      // PRIORITY 3: Assignments - skip if within creation window (likely initial assignment)
+      if (subtype === 'assigned' || text.includes('assigned to') || text.includes('assigned this task')) {
+        if (isWithinCreationWindow) continue;
+        return story.created_at;
+      }
+      
+      // PRIORITY 4: "In Progress" or active status changes
       if (subtype === 'enum_custom_field_changed') {
         // Check for progress field changes to active states
         if (text.includes('in progress') || 
@@ -115,27 +133,16 @@ async function fetchFirstMeaningfulActivity(
         continue;
       }
       
-      // PRIORITY 4: Section moves to active sections (not just any move)
+      // PRIORITY 5: Section moves - skip if within creation window (likely initial placement)
       if (subtype === 'section_changed' || text.includes('moved this task') || text.includes('moved to')) {
-        // Check if moved to an active section
-        if (text.includes('in progress') || 
-            text.includes('development') || 
-            text.includes('mockup') ||
-            text.includes('design') ||
-            text.includes('review') ||
-            text.includes('launch')) {
-          return story.created_at;
-        }
-        // Skip moves to backlog/inbox/not started sections
+        // Skip moves to backlog/inbox/not started sections always
         if (text.includes('backlog') || text.includes('inbox') || text.includes('not started')) {
           continue;
         }
-        // Accept other section moves as they likely indicate work
-        return story.created_at;
-      }
-      
-      // PRIORITY 5: Marked complete/incomplete (definitely worked on)
-      if (subtype === 'marked_complete' || subtype === 'marked_incomplete') {
+        // Skip ANY section move within creation window (initial placement)
+        if (isWithinCreationWindow) continue;
+        
+        // Accept section moves after creation window
         return story.created_at;
       }
       
@@ -144,8 +151,9 @@ async function fetchFirstMeaningfulActivity(
         return story.created_at;
       }
       
-      // PRIORITY 7: Subtasks added (work breakdown happened)
+      // PRIORITY 7: Subtasks added - skip if within creation window
       if (subtype === 'subtask_added' || text.includes('added subtask')) {
+        if (isWithinCreationWindow) continue;
         return story.created_at;
       }
       
@@ -741,7 +749,8 @@ export default function App() {
                                 }
                                 
                                 fetchedCount++;
-                                const activityDate = await fetchFirstMeaningfulActivity(task.gid, ASANA_API_BASE, token);
+                                // Pass task.created_at to filter out creation-adjacent activities
+                                const activityDate = await fetchFirstMeaningfulActivity(task.gid, ASANA_API_BASE, token, task.created_at);
                                 if (activityDate) foundCount++;
                                 
                                 return {

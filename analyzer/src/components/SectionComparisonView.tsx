@@ -75,9 +75,13 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
    * - Task creation (we want post-creation activity)
    * - Unassignment (task being removed from someone)
    * - System-generated stories
+   * - Any activity within 5 minutes of creation (likely initial setup)
    */
-  const fetchFirstMeaningfulActivity = useCallback(async (taskGid: string): Promise<string | null> => {
+  const fetchFirstMeaningfulActivity = useCallback(async (taskGid: string, taskCreatedAt?: string): Promise<string | null> => {
     if (!token) return null;
+    
+    // Minimum time after creation (5 minutes) before we consider activity as "real work"
+    const CREATION_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
     
     try {
       const storiesResponse = await fetch(
@@ -90,83 +94,104 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
       const storiesData = await storiesResponse.json();
       const stories = storiesData.data || [];
       
+      const taskCreationTime = taskCreatedAt ? new Date(taskCreatedAt).getTime() : 0;
+      
       // Find the first story that represents meaningful activity
-      // Stories are typically in chronological order
       for (const story of stories) {
-        // Skip if no text or created_at
         if (!story.created_at) continue;
         
+        const storyTime = new Date(story.created_at).getTime();
         const text = (story.text || '').toLowerCase();
         const subtype = story.resource_subtype || '';
         
+        // Check if this activity is within the creation window (likely setup, not work)
+        const isWithinCreationWindow = taskCreationTime > 0 && (storyTime - taskCreationTime) < CREATION_WINDOW_MS;
+        
+        // === SKIP these story types (not meaningful activity) ===
+        
         // Skip creation stories
-        if (subtype === 'added_to_project' && text.includes('added this task')) continue;
+        if (subtype === 'added_to_project') continue;
         if (text.includes('created this task')) continue;
+        if (text.includes('added this task')) continue;
         
         // Skip unassignment stories
         if (text.includes('unassigned') || text.includes('removed assignee')) continue;
         if (text.includes('removed from')) continue;
         
-        // Accept various meaningful activities:
-        // 1. Assignment stories
-        if (text.includes('assigned to') || text.includes('assigned this task') || subtype === 'assigned') {
-          console.log(`Task ${taskGid}: Found assignment activity at ${story.created_at}`);
-          return story.created_at;
-        }
+        // Skip "Not Started" status changes
+        if (text.includes('not started')) continue;
+        if (text.includes('to do')) continue;
+        if (text.includes('backlog')) continue;
         
-        // 2. Section/column changes
-        if (text.includes('moved this task') || text.includes('moved to') || subtype === 'section_changed') {
-          console.log(`Task ${taskGid}: Found section move activity at ${story.created_at}`);
-          return story.created_at;
-        }
+        // Skip due date changes (can happen before work starts)
+        if (subtype === 'due_date_changed') continue;
+        if (text.includes('changed the due date')) continue;
+        if (text.includes('set the due date')) continue;
         
-        // 3. Due date changes
-        if (text.includes('due date') || text.includes('due on') || subtype === 'due_date_changed') {
-          console.log(`Task ${taskGid}: Found due date activity at ${story.created_at}`);
-          return story.created_at;
-        }
+        // Skip name/description changes at creation time
+        if (subtype === 'name_changed' || subtype === 'description_changed' || subtype === 'notes_changed') continue;
         
-        // 4. Status/completion changes
-        if (text.includes('marked') || text.includes('completed') || subtype === 'marked_complete' || subtype === 'marked_incomplete') {
-          console.log(`Task ${taskGid}: Found status activity at ${story.created_at}`);
-          return story.created_at;
-        }
+        // === ACCEPT these story types (meaningful activity) ===
         
-        // 5. Comments (indicates active work)
+        // PRIORITY 1: Comments - ALWAYS meaningful, even within creation window
         if (subtype === 'comment_added' || story.type === 'comment') {
           console.log(`Task ${taskGid}: Found comment activity at ${story.created_at}`);
           return story.created_at;
         }
         
-        // 6. Attachments
-        if (text.includes('attached') || subtype === 'attachment_added') {
+        // PRIORITY 2: Marked complete/incomplete - ALWAYS meaningful
+        if (subtype === 'marked_complete' || subtype === 'marked_incomplete') {
+          console.log(`Task ${taskGid}: Found completion status at ${story.created_at}`);
+          return story.created_at;
+        }
+        
+        // PRIORITY 3: Assignments - skip if within creation window (likely initial assignment)
+        if (subtype === 'assigned' || text.includes('assigned to') || text.includes('assigned this task')) {
+          if (isWithinCreationWindow) continue;
+          console.log(`Task ${taskGid}: Found assignment activity at ${story.created_at}`);
+          return story.created_at;
+        }
+        
+        // PRIORITY 4: "In Progress" or active status changes
+        if (subtype === 'enum_custom_field_changed') {
+          if (text.includes('in progress') || 
+              text.includes('in review') || 
+              text.includes('working') ||
+              text.includes('started') ||
+              text.includes('active')) {
+            console.log(`Task ${taskGid}: Found in-progress status at ${story.created_at}`);
+            return story.created_at;
+          }
+          continue;
+        }
+        
+        // PRIORITY 5: Section moves - skip if within creation window (likely initial placement)
+        if (subtype === 'section_changed' || text.includes('moved this task') || text.includes('moved to')) {
+          // Skip moves to backlog/inbox/not started sections always
+          if (text.includes('backlog') || text.includes('inbox') || text.includes('not started')) {
+            continue;
+          }
+          // Skip ANY section move within creation window (initial placement)
+          if (isWithinCreationWindow) continue;
+          
+          console.log(`Task ${taskGid}: Found section move activity at ${story.created_at}`);
+          return story.created_at;
+        }
+        
+        // PRIORITY 6: Attachments (someone added work product)
+        if (subtype === 'attachment_added' || text.includes('attached')) {
           console.log(`Task ${taskGid}: Found attachment activity at ${story.created_at}`);
           return story.created_at;
         }
         
-        // 7. Subtask additions (indicates work breakdown)
-        if (text.includes('added subtask') || subtype === 'subtask_added') {
+        // PRIORITY 7: Subtasks added - skip if within creation window
+        if (subtype === 'subtask_added' || text.includes('added subtask')) {
+          if (isWithinCreationWindow) continue;
           console.log(`Task ${taskGid}: Found subtask activity at ${story.created_at}`);
           return story.created_at;
         }
         
-        // 8. Description changes
-        if (text.includes('changed the description') || subtype === 'description_changed') {
-          console.log(`Task ${taskGid}: Found description activity at ${story.created_at}`);
-          return story.created_at;
-        }
-        
-        // 9. Name changes
-        if (text.includes('changed the name') || subtype === 'name_changed') {
-          console.log(`Task ${taskGid}: Found name change activity at ${story.created_at}`);
-          return story.created_at;
-        }
-        
-        // 10. CATCH-ALL: Any other story that isn't creation/unassignment is activity
-        if (story.resource_type === 'story' && subtype && subtype !== 'added_to_project') {
-          console.log(`Task ${taskGid}: Found other activity (${subtype}) at ${story.created_at}`);
-          return story.created_at;
-        }
+        // Skip everything else - be conservative (no catch-all)
       }
       
       return null;
@@ -417,7 +442,8 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
               }
             } else {
               // No cached activity, try to fetch it
-              const activityDateStr = await fetchFirstMeaningfulActivity(task.gid);
+              // Pass created_at to filter out creation-adjacent activities
+              const activityDateStr = await fetchFirstMeaningfulActivity(task.gid, task.created_at);
               
               if (activityDateStr) {
                 const activityDate = new Date(activityDateStr);

@@ -100,11 +100,15 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
   // Fetch the first meaningful activity date from a task's history stories
   // This includes assignments, section moves, due date changes, comments, etc.
   // Excludes: creation and unassignment events
-  const fetchFirstMeaningfulActivityDate = async (taskGid: string, taskName: string): Promise<Date | null> => {
+  // Also excludes activities within 5 minutes of task creation (likely initial setup)
+  const fetchFirstMeaningfulActivityDate = async (taskGid: string, taskName: string, taskCreatedAt?: string): Promise<Date | null> => {
     if (!token || !apiBase) {
       console.warn(`Cannot fetch activity date for task ${taskName}: missing token or apiBase`);
       return null;
     }
+
+    // Minimum time after creation (5 minutes) before we consider activity as "real work"
+    const CREATION_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 
     try {
       console.log(`Fetching stories for task "${taskName}" (GID: ${taskGid})...`);
@@ -123,15 +127,22 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
       const storiesData = await storiesResponse.json();
       console.log(`Retrieved ${storiesData.data.length} stories for task "${taskName}"`);
       
+      const taskCreationTime = taskCreatedAt ? new Date(taskCreatedAt).getTime() : 0;
+      
       // Find the first MEANINGFUL activity story
-      // PRIORITY: Comments > Assignments > In Progress status > Section moves to active sections
+      // PRIORITY: Comments > Marked complete > Assignments > In Progress status > Section moves
       // EXCLUDED: Creation, unassignment, "not started", due date changes
+      // Also skip activities within 5 minutes of creation (likely initial setup)
       
       for (const story of storiesData.data) {
         if (!story.created_at) continue;
         
+        const storyTime = new Date(story.created_at).getTime();
         const text = (story.text || '').toLowerCase();
         const subtype = story.resource_subtype || '';
+        
+        // Check if this activity is within the creation window (likely setup, not work)
+        const isWithinCreationWindow = taskCreationTime > 0 && (storyTime - taskCreationTime) < CREATION_WINDOW_MS;
         
         // === SKIP these story types (not meaningful activity) ===
         
@@ -160,19 +171,29 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
         
         // === ACCEPT these story types (meaningful activity) ===
         
-        // PRIORITY 1: Comments - strongest signal of actual work
+        // PRIORITY 1: Comments - ALWAYS meaningful, even within creation window
         if (subtype === 'comment_added' || story.type === 'comment') {
           console.log(`✓ Found COMMENT activity for "${taskName}": ${story.created_at}`);
           return new Date(story.created_at);
         }
         
-        // PRIORITY 2: Assignments - someone took ownership
+        // PRIORITY 2: Marked complete/incomplete - ALWAYS meaningful
+        if (subtype === 'marked_complete' || subtype === 'marked_incomplete') {
+          console.log(`✓ Found COMPLETION status for "${taskName}": ${story.created_at}`);
+          return new Date(story.created_at);
+        }
+        
+        // PRIORITY 3: Assignments - skip if within creation window (likely initial assignment)
         if (subtype === 'assigned' || text.includes('assigned to') || text.includes('assigned this task')) {
+          if (isWithinCreationWindow) {
+            console.log(`⏭️ Skipping initial assignment for "${taskName}" (within creation window)`);
+            continue;
+          }
           console.log(`✓ Found ASSIGNMENT activity for "${taskName}": ${story.created_at}`);
           return new Date(story.created_at);
         }
         
-        // PRIORITY 3: "In Progress" or active status changes
+        // PRIORITY 4: "In Progress" or active status changes
         if (subtype === 'enum_custom_field_changed') {
           // Check for progress field changes to active states
           if (text.includes('in progress') || 
@@ -187,30 +208,19 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           continue;
         }
         
-        // PRIORITY 4: Section moves to active sections
+        // PRIORITY 5: Section moves - skip if within creation window (likely initial placement)
         if (subtype === 'section_changed' || text.includes('moved this task') || text.includes('moved to')) {
-          // Skip moves to backlog/inbox/not started sections
+          // Skip moves to backlog/inbox/not started sections always
           if (text.includes('backlog') || text.includes('inbox') || text.includes('not started')) {
             continue;
           }
-          // Check if moved to an active section
-          if (text.includes('in progress') || 
-              text.includes('development') || 
-              text.includes('mockup') ||
-              text.includes('design') ||
-              text.includes('review') ||
-              text.includes('launch')) {
-            console.log(`✓ Found SECTION MOVE to active section for "${taskName}": ${story.created_at}`);
-            return new Date(story.created_at);
+          // Skip ANY section move within creation window (initial placement)
+          if (isWithinCreationWindow) {
+            console.log(`⏭️ Skipping initial section move for "${taskName}" (within creation window)`);
+            continue;
           }
-          // Accept other section moves as they likely indicate work
+          // Accept section moves after creation window
           console.log(`✓ Found SECTION MOVE for "${taskName}": ${story.created_at}`);
-          return new Date(story.created_at);
-        }
-        
-        // PRIORITY 5: Marked complete/incomplete (definitely worked on)
-        if (subtype === 'marked_complete' || subtype === 'marked_incomplete') {
-          console.log(`✓ Found COMPLETION status for "${taskName}": ${story.created_at}`);
           return new Date(story.created_at);
         }
         
@@ -220,8 +230,12 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           return new Date(story.created_at);
         }
         
-        // PRIORITY 7: Subtasks added (work breakdown happened)
+        // PRIORITY 7: Subtasks added - skip if within creation window
         if (subtype === 'subtask_added' || text.includes('added subtask')) {
+          if (isWithinCreationWindow) {
+            console.log(`⏭️ Skipping initial subtask for "${taskName}" (within creation window)`);
+            continue;
+          }
           console.log(`✓ Found SUBTASK activity for "${taskName}": ${story.created_at}`);
           return new Date(story.created_at);
         }
@@ -624,7 +638,8 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
             console.log(`First task: "${firstTask.name}" (GID: ${firstTask.gid})`);
             
             // Try to get assignment date from first task
-            let tempAssignedDate = await fetchFirstMeaningfulActivityDate(firstTask.gid, firstTask.name || 'unknown');
+            // Pass created_at to filter out creation-adjacent activities
+            let tempAssignedDate = await fetchFirstMeaningfulActivityDate(firstTask.gid, firstTask.name || 'unknown', firstTask.created_at);
             
             // If not found, try subsequent tasks until we find one
             if (!tempAssignedDate && sortedByCreation.length > 1) {
@@ -633,7 +648,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
                 const nextTask = sortedByCreation[i];
                 if (nextTask && nextTask.gid) {
                   console.log(`Trying task ${i + 1}: "${nextTask.name}"`);
-                  tempAssignedDate = await fetchFirstMeaningfulActivityDate(nextTask.gid, nextTask.name || 'unknown');
+                  tempAssignedDate = await fetchFirstMeaningfulActivityDate(nextTask.gid, nextTask.name || 'unknown', nextTask.created_at);
                   if (tempAssignedDate) {
                     console.log(`✓ Found assignment date from task ${i + 1}: ${tempAssignedDate.toISOString()}`);
                     break;
