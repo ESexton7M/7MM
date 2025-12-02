@@ -281,6 +281,24 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
   
   // Loading state for section data
   const [sectionDataLoading, setSectionDataLoading] = useState<boolean>(false);
+  
+  // State for condensed view - holds ALL section data for each project
+  interface CondensedSectionData {
+    section: string;
+    startDate: Date | null;
+    endDate: Date | null;
+    duration: number; // in days
+  }
+  interface CondensedProjectData {
+    projectName: string;
+    projectGid?: string;
+    sections: CondensedSectionData[];
+    overallStart: Date | null;
+    overallEnd: Date | null;
+    totalDuration: number; // in days
+  }
+  const [condensedViewData, setCondensedViewData] = useState<CondensedProjectData[]>([]);
+  const [condensedViewLoading, setCondensedViewLoading] = useState<boolean>(false);
 
   // We're using predefined sections, but we still need to preload section data
   useEffect(() => {
@@ -762,6 +780,129 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
     fetchSectionData();
   }, [activeTab, selectedSection, projectDurations, preloadedTasks]);
 
+  // Load data for condensed view - all sections for each project
+  useEffect(() => {
+    if (activeTab !== 'condensed-view') return;
+    
+    const loadCondensedViewData = async () => {
+      setCondensedViewLoading(true);
+      try {
+        // Use SERVER cache as the data source
+        const { getCachedProjectTasks } = await import('../utils/serverCache');
+        
+        const condensedData: CondensedProjectData[] = [];
+        
+        // Filter to only website projects
+        const websiteProjects = filterWebsiteProjectsOnly(projectDurations).filter(p => !isInternalProject(p.name));
+        
+        for (const project of websiteProjects) {
+          // Get tasks from preloaded or server cache
+          let projectTasks: Task[] = [];
+          
+          if (project.gid && preloadedTasks[project.gid]) {
+            projectTasks = preloadedTasks[project.gid] || [];
+          } else if (project.gid) {
+            try {
+              const cached = await getCachedProjectTasks(project.gid);
+              projectTasks = cached || [];
+            } catch (e) {
+              console.log(`No cached tasks for ${project.name}`);
+            }
+          }
+          
+          if (!projectTasks || projectTasks.length === 0) continue;
+          
+          // Group tasks by mapped section
+          const sectionTasks: Record<string, Task[]> = {};
+          
+          for (const task of projectTasks) {
+            const sectionName = extractSectionFromTask(task);
+            if (REQUIRED_SECTIONS.includes(sectionName)) {
+              if (!sectionTasks[sectionName]) {
+                sectionTasks[sectionName] = [];
+              }
+              sectionTasks[sectionName].push(task);
+            }
+          }
+          
+          // Calculate dates for each section
+          const sectionDataList: CondensedSectionData[] = [];
+          
+          for (const section of REQUIRED_SECTIONS) {
+            const tasks = sectionTasks[section] || [];
+            if (tasks.length === 0) continue;
+            
+            // Find earliest start date (first_activity_at or created_at)
+            let sectionStart: Date | null = null;
+            let sectionEnd: Date | null = null;
+            
+            for (const task of tasks) {
+              // Start date: prefer first_activity_at, fall back to created_at
+              const startDateStr = task.first_activity_at || task.created_at;
+              if (startDateStr) {
+                const startDate = new Date(startDateStr);
+                if (!sectionStart || startDate < sectionStart) {
+                  sectionStart = startDate;
+                }
+              }
+              
+              // End date: prefer completed_at, otherwise use created_at as approximation
+              const endDateStr = task.completed_at || task.created_at;
+              if (endDateStr) {
+                const endDate = new Date(endDateStr);
+                if (!sectionEnd || endDate > sectionEnd) {
+                  sectionEnd = endDate;
+                }
+              }
+            }
+            
+            if (sectionStart && sectionEnd) {
+              const duration = (sectionEnd.getTime() - sectionStart.getTime()) / (1000 * 60 * 60 * 24);
+              sectionDataList.push({
+                section,
+                startDate: sectionStart,
+                endDate: sectionEnd,
+                duration: Math.max(1, duration) // At least 1 day
+              });
+            }
+          }
+          
+          if (sectionDataList.length === 0) continue;
+          
+          // Calculate overall project dates
+          const allStarts = sectionDataList.filter(s => s.startDate).map(s => s.startDate!.getTime());
+          const allEnds = sectionDataList.filter(s => s.endDate).map(s => s.endDate!.getTime());
+          
+          const overallStart = allStarts.length > 0 ? new Date(Math.min(...allStarts)) : null;
+          const overallEnd = allEnds.length > 0 ? new Date(Math.max(...allEnds)) : null;
+          const totalDuration = overallStart && overallEnd 
+            ? (overallEnd.getTime() - overallStart.getTime()) / (1000 * 60 * 60 * 24)
+            : 0;
+          
+          condensedData.push({
+            projectName: project.name,
+            projectGid: project.gid,
+            sections: sectionDataList,
+            overallStart,
+            overallEnd,
+            totalDuration: Math.max(1, totalDuration)
+          });
+        }
+        
+        // Sort by total duration (shortest first)
+        condensedData.sort((a, b) => a.totalDuration - b.totalDuration);
+        
+        setCondensedViewData(condensedData);
+      } catch (err) {
+        console.error('Error loading condensed view data:', err);
+      } finally {
+        setCondensedViewLoading(false);
+      }
+    };
+    
+    loadCondensedViewData();
+  }, [activeTab, projectDurations, preloadedTasks]);
+
   // Generate data for section-based comparison
   const sectionComparisonData = useMemo(() => {
     if (activeTab !== 'sections' && !activeTab.startsWith('section-')) return [];
@@ -963,6 +1104,17 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           onClick={() => setActiveTab('monthly-timeline')}
         >
           Monthly Timeline
+        </button>
+
+        <button
+          className={`py-2 px-3 sm:px-4 font-medium text-sm sm:text-base ${
+            activeTab === 'condensed-view'
+              ? 'text-blue-400 border-b-2 border-blue-400'
+              : 'text-gray-400 hover:text-gray-300'
+          }`}
+          onClick={() => setActiveTab('condensed-view')}
+        >
+          Condensed View
         </button>
       </div>
 
@@ -1537,6 +1689,192 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
               projectDurations={projectDurations}
               highlightedProjects={highlightedProjects}
             />
+          </div>
+        )}
+
+        {/* Condensed View Tab - Gantt-style overlapping section bars */}
+        {activeTab === 'condensed-view' && (
+          <div className="mt-4">
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold mb-2">Project Timeline Overview</h3>
+              <p className="text-sm text-gray-400 mb-4">
+                Each row shows all phases for a project. Overlapping sections indicate simultaneous work.
+              </p>
+              
+              {/* Legend */}
+              <div className="flex flex-wrap gap-4 mb-6">
+                {REQUIRED_SECTIONS.map(section => (
+                  <div key={section} className="flex items-center">
+                    <div 
+                      className="w-4 h-4 rounded-sm mr-2"
+                      style={{ backgroundColor: getSectionCategoryColor(section) }}
+                    />
+                    <span className="text-sm text-gray-300">{section}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {condensedViewLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+                <span className="ml-3 text-gray-400">Loading project timelines...</span>
+              </div>
+            ) : condensedViewData.length > 0 ? (
+              <div className="space-y-3">
+                {condensedViewData.map((project) => {
+                  // Calculate the date range for this project's timeline
+                  if (!project.overallStart || !project.overallEnd) return null;
+                  
+                  const timelineStart = project.overallStart.getTime();
+                  const timelineEnd = project.overallEnd.getTime();
+                  const timelineRange = timelineEnd - timelineStart;
+                  
+                  if (timelineRange <= 0) return null;
+                  
+                  return (
+                    <div 
+                      key={project.projectName} 
+                      className="bg-gray-800 rounded-lg p-3 hover:bg-gray-750 transition-colors"
+                    >
+                      {/* Project name */}
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium text-gray-200 truncate flex-1 mr-4">
+                          {project.projectName}
+                        </span>
+                        <span className="text-sm text-gray-400 whitespace-nowrap">
+                          {formatDurationInWeeks(project.totalDuration)}
+                        </span>
+                      </div>
+                      
+                      {/* Timeline bar container */}
+                      <div className="relative h-8 bg-gray-700 rounded overflow-hidden">
+                        {/* Section bars - stacked with overlaps visible */}
+                        {project.sections.map((section, sectionIndex) => {
+                          if (!section.startDate || !section.endDate) return null;
+                          
+                          const sectionStart = section.startDate.getTime();
+                          const sectionEnd = section.endDate.getTime();
+                          
+                          // Calculate position and width as percentage of timeline
+                          const leftPercent = ((sectionStart - timelineStart) / timelineRange) * 100;
+                          const widthPercent = ((sectionEnd - sectionStart) / timelineRange) * 100;
+                          
+                          // Stack sections vertically within the bar
+                          const sectionHeight = 100 / Math.max(1, project.sections.filter(s => s.startDate && s.endDate).length);
+                          const topPercent = sectionIndex * sectionHeight;
+                          
+                          return (
+                            <div
+                              key={`${project.projectName}-${section.section}`}
+                              className="absolute rounded-sm cursor-pointer transition-opacity hover:opacity-80 group"
+                              style={{
+                                left: `${Math.max(0, leftPercent)}%`,
+                                width: `${Math.min(100 - leftPercent, Math.max(1, widthPercent))}%`,
+                                top: `${topPercent}%`,
+                                height: `${sectionHeight}%`,
+                                backgroundColor: getSectionCategoryColor(section.section),
+                                minWidth: '4px'
+                              }}
+                              title={`${section.section}: ${section.startDate.toLocaleDateString()} - ${section.endDate.toLocaleDateString()} (${Math.round(section.duration)} days)`}
+                            >
+                              {/* Tooltip on hover */}
+                              <div className="absolute hidden group-hover:block z-20 bg-gray-900 border border-gray-600 rounded-lg p-3 shadow-xl -top-24 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+                                <p className="font-semibold text-sm" style={{ color: getSectionCategoryColor(section.section) }}>
+                                  {section.section}
+                                </p>
+                                <p className="text-xs text-gray-300 mt-1">
+                                  Start: {section.startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                </p>
+                                <p className="text-xs text-gray-300">
+                                  End: {section.endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                </p>
+                                <p className="text-xs text-gray-400 mt-1">
+                                  Duration: {formatDurationInWeeks(section.duration)}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      
+                      {/* Date labels */}
+                      <div className="flex justify-between mt-1 text-xs text-gray-500">
+                        <span>{project.overallStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                        <span>{project.overallEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-400">No project timeline data available.</p>
+              </div>
+            )}
+
+            {/* Summary statistics */}
+            {condensedViewData.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-gray-700">
+                <h4 className="text-lg font-semibold mb-4">Timeline Statistics</h4>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="bg-gray-800 p-4 rounded-md">
+                    <p className="text-sm text-gray-400">Projects</p>
+                    <p className="text-2xl font-bold">{condensedViewData.length}</p>
+                  </div>
+                  <div className="bg-gray-800 p-4 rounded-md">
+                    <p className="text-sm text-gray-400">Avg Duration</p>
+                    <p className="text-2xl font-bold">
+                      {formatDurationInWeeks(
+                        condensedViewData.reduce((sum, p) => sum + p.totalDuration, 0) / condensedViewData.length
+                      )}
+                    </p>
+                  </div>
+                  <div className="bg-gray-800 p-4 rounded-md">
+                    <p className="text-sm text-gray-400">With Overlaps</p>
+                    <p className="text-2xl font-bold">
+                      {condensedViewData.filter(p => {
+                        // Check if any sections overlap
+                        const sections = p.sections;
+                        for (let i = 0; i < sections.length; i++) {
+                          for (let j = i + 1; j < sections.length; j++) {
+                            const a = sections[i]!;
+                            const b = sections[j]!;
+                            if (a && b && a.startDate && a.endDate && b.startDate && b.endDate) {
+                              if (a.startDate < b.endDate && b.startDate < a.endDate) {
+                                return true;
+                              }
+                            }
+                          }
+                        }
+                        return false;
+                      }).length}
+                    </p>
+                  </div>
+                  <div className="bg-gray-800 p-4 rounded-md">
+                    <p className="text-sm text-gray-400">Sequential Only</p>
+                    <p className="text-2xl font-bold">
+                      {condensedViewData.filter(p => {
+                        // Check if all sections are sequential (no overlaps)
+                        const sections = p.sections;
+                        for (let i = 0; i < sections.length; i++) {
+                          for (let j = i + 1; j < sections.length; j++) {
+                            const a = sections[i]!;
+                            const b = sections[j]!;
+                            if (a && b && a.startDate && a.endDate && b.startDate && b.endDate) {
+                              if (a.startDate < b.endDate && b.startDate < a.endDate) {
+                                return false;
+                              }
+                            }
+                          }
+                        }
+                        return true;
+                      }).length}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
