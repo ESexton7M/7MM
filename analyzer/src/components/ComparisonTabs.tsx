@@ -978,30 +978,32 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
             </svg>
           </button>
           
-          {/* Dropdown for section selection */}
-          <div className="absolute left-0 hidden z-10 mt-1 w-44 sm:w-48 bg-gray-800 rounded-md shadow-lg border border-gray-700 group-hover:block">
-            {availableSections.map((section: string) => (
-              <button
-                key={section}
-                className={`block w-full text-left px-3 sm:px-4 py-2 text-xs sm:text-sm ${
-                  (activeTab === 'sections' && selectedSection === section) || activeTab === `section-${section}`
-                    ? 'bg-gray-700 text-blue-400'
-                    : 'text-gray-300 hover:bg-gray-700'
-                }`}
-                onClick={() => {
-                  setSelectedSection(section);
-                  setActiveTab(`section-${section}`);
-                }}
-              >
-                <div className="flex items-center">
-                  <div
-                    className="w-2 h-2 sm:w-3 sm:h-3 rounded-sm mr-2"
-                    style={{ backgroundColor: getSectionCategoryColor(section) }}
-                  />
-                  <span className="truncate">{section}</span>
-                </div>
-              </button>
-            ))}
+          {/* Dropdown for section selection - pt-2 creates overlap area to prevent hover gap */}
+          <div className="absolute left-0 hidden z-10 pt-2 w-44 sm:w-48 group-hover:block">
+            <div className="bg-gray-800 rounded-md shadow-lg border border-gray-700">
+              {availableSections.map((section: string) => (
+                <button
+                  key={section}
+                  className={`block w-full text-left px-3 sm:px-4 py-2 text-xs sm:text-sm ${
+                    (activeTab === 'sections' && selectedSection === section) || activeTab === `section-${section}`
+                      ? 'bg-gray-700 text-blue-400'
+                      : 'text-gray-300 hover:bg-gray-700'
+                  }`}
+                  onClick={() => {
+                    setSelectedSection(section);
+                    setActiveTab(`section-${section}`);
+                  }}
+                >
+                  <div className="flex items-center">
+                    <div
+                      className="w-2 h-2 sm:w-3 sm:h-3 rounded-sm mr-2"
+                      style={{ backgroundColor: getSectionCategoryColor(section) }}
+                    />
+                    <span className="truncate">{section}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -1717,12 +1719,13 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
                             >
                               {/* Tooltip on hover - positioned above with pointer events */}
                               <div 
-                                className="pointer-events-none absolute hidden group-hover/section:block z-50 bg-gray-900 border border-gray-600 rounded-lg p-3 shadow-xl whitespace-nowrap"
+                                className="pointer-events-none absolute hidden group-hover/section:block z-50 border border-gray-600 rounded-lg p-3 shadow-xl whitespace-nowrap"
                                 style={{
                                   bottom: '100%',
                                   left: '50%',
                                   transform: 'translateX(-50%)',
-                                  marginBottom: '8px'
+                                  marginBottom: '8px',
+                                  backgroundColor: 'rgb(17, 24, 39)'
                                 }}
                               >
                                 <p className="font-semibold text-sm" style={{ color: getSectionCategoryColor(section.section) }}>
