@@ -161,6 +161,12 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
           console.log(`Task ${taskGid}: Found name change activity at ${story.created_at}`);
           return story.created_at;
         }
+        
+        // 10. CATCH-ALL: Any other story that isn't creation/unassignment is activity
+        if (story.resource_type === 'story' && subtype && subtype !== 'added_to_project') {
+          console.log(`Task ${taskGid}: Found other activity (${subtype}) at ${story.created_at}`);
+          return story.created_at;
+        }
       }
       
       return null;
@@ -786,7 +792,8 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
   const extractSectionFromTask = (task: Task): string => {
     // 1. Use direct section property if available
     if (task.section && task.section.trim()) {
-      return task.section.trim();
+      const mappedSection = mapToRequiredSection(task.section.trim());
+      if (mappedSection) return mappedSection;
     }
     
     // 2. Try to extract from task name if available
@@ -794,13 +801,22 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
       // Try to match section patterns like "Section: Task name"
       const sectionMatch = task.name.match(/^([^:]+):/);
       if (sectionMatch && sectionMatch[1]) {
-        return sectionMatch[1].trim();
+        const mappedSection = mapToRequiredSection(sectionMatch[1].trim());
+        if (mappedSection) return mappedSection;
       }
       
       // Try to match bracket pattern like "[Section] Task name"
       const bracketMatch = task.name.match(/^\[([^\]]+)\]/);
       if (bracketMatch && bracketMatch[1]) {
-        return bracketMatch[1].trim();
+        const mappedSection = mapToRequiredSection(bracketMatch[1].trim());
+        if (mappedSection) return mappedSection;
+      }
+      
+      // 3. Try to infer from task name directly
+      // The task name itself might contain keywords that match a section
+      const directMapping = mapToRequiredSection(task.name);
+      if (directMapping) {
+        return directMapping;
       }
     }
     

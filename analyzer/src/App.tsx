@@ -100,6 +100,12 @@ async function fetchFirstMeaningfulActivity(
       if (text.includes('changed the name') || subtype === 'name_changed') {
         return story.created_at;
       }
+      
+      // CATCH-ALL: Any other story that isn't creation/unassignment is activity
+      // This catches edge cases we might have missed
+      if (story.resource_type === 'story' && subtype && subtype !== 'added_to_project') {
+        return story.created_at;
+      }
     }
     
     return null;

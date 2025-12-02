@@ -206,6 +206,13 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           console.log(`✓ Found subtask activity for "${taskName}": ${story.created_at}`);
           return new Date(story.created_at);
         }
+        
+        // 10. CATCH-ALL: Any other story that isn't creation/unassignment is activity
+        // This catches edge cases we might have missed
+        if (story.resource_type === 'story' && subtype && subtype !== 'added_to_project') {
+          console.log(`✓ Found other activity (${subtype}) for "${taskName}": ${story.created_at}`);
+          return new Date(story.created_at);
+        }
       }
 
       console.warn(`✗ No meaningful activity found for task "${taskName}" among ${storiesData.data.length} stories`);
@@ -383,6 +390,15 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
       const mappedSection = mapToRequiredSection(rawSectionName);
       if (mappedSection) {
         return mappedSection;
+      }
+    }
+    
+    // 3. If no section found yet, try to infer from the task name directly
+    // The task name itself might contain keywords that match a section
+    if (task.name) {
+      const directMapping = mapToRequiredSection(task.name);
+      if (directMapping) {
+        return directMapping;
       }
     }
     
