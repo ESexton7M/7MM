@@ -4,23 +4,25 @@ A comprehensive React TypeScript application for visualizing and analyzing Asana
 
 <img width="1920" height="3677" alt="screencapture-analytics-7mountainscreative-2025-09-18-14_05_13" src="https://github.com/user-attachments/assets/dbf56cc4-5d6b-4e3c-9c81-e1b6c13cb0be" />
 
-
 ## Features
 
 - **Project Data Visualization**: View task completion metrics and analyze project efficiency
 - **Cross-Project Analysis**: Compare durations across multiple projects with filtering and sorting options
 - **Section Completion Analytics**: Break down project stages to identify bottlenecks and optimize workflows
+- **Server-Side Caching**: Persistent cache with automatic 2-day refresh cycle
 - **Interactive Charts**: Visualize data through responsive, interactive charts powered by Recharts
 - **Smooth Animations**: Enhanced user experience with GSAP animations
 - **Responsive Design**: Works seamlessly on desktop and mobile devices
 - **TypeScript Integration**: Full type safety throughout the application
 
-## Getting Started
+## Quick Start
 
 ### Prerequisites
 
-- Node.js (v16+)
+- Node.js (v16 or higher)
+- npm
 - Asana Personal Access Token
+- Google OAuth Client ID (optional)
 
 ### Installation
 
@@ -30,69 +32,109 @@ A comprehensive React TypeScript application for visualizing and analyzing Asana
    cd asana-analytics-dashboard
    ```
 
-2. Install dependencies:
+2. Install all dependencies:
    ```bash
-   npm install
+   npm run install:all
    ```
 
-3. Create a `.env` file in the root directory with your Asana token:
+3. Configure environment variables in `analyzer/.env`:
    ```
    VITE_ASANA_TOKEN=your_personal_access_token
+   VITE_GOOGLE_CLIENT_ID=your_google_client_id
+   VITE_ASANA_API_BASE=https://app.asana.com/api/1.0
    ```
    
-   > **Note**: You can generate an Asana Personal Access Token in your [Asana Developer Console](https://app.asana.com/0/developer-console).
+   > **Note**: Generate an Asana Personal Access Token in your [Asana Developer Console](https://app.asana.com/0/developer-console).
 
-4. Start the development server:
-   ```bash
-   npm run dev
-   ```
+### Running the Application
 
-5. Build for production:
+#### Development Mode
+
+Start both the backend server and frontend development server:
+```bash
+npm run dev
+```
+
+This will:
+- Start the API server on http://localhost:8080
+- Start the Vite dev server on http://localhost:3000
+- Open the application in your browser automatically
+
+#### Production Mode
+
+1. Build the application:
    ```bash
    npm run build
+   ```
+
+2. Start the server:
+   ```bash
+   npm start
    ```
 
 ## Project Structure
 
 ```
-src/
-├── components/         # UI components
-│   ├── DashboardView.tsx
-│   ├── ErrorDisplay.tsx
-│   ├── LoadingSpinner.tsx
-│   ├── ProjectDurationChart.tsx
-│   └── TaskTable.tsx
-├── types/              # TypeScript interfaces
-│   └── index.ts
-├── utils/              # Utility functions
-│   └── env.ts
-├── App.tsx             # Main application component
-├── main.tsx           # Entry point
-└── index.css          # Global styles
+7MM/
+├── analyzer/                 # Main application
+│   ├── src/                  # React TypeScript source
+│   │   ├── components/       # UI components
+│   │   ├── hooks/            # Custom React hooks
+│   │   ├── types/            # TypeScript definitions
+│   │   ├── utils/            # Utility functions
+│   │   └── config/           # Configuration files
+│   ├── server/               # Backend API server
+│   │   ├── server.js         # Express server with caching
+│   │   └── cache/            # Server-side cache storage
+│   ├── public/               # Static assets
+│   └── dist/                 # Built application (generated)
+├── package.json              # Root package configuration
+└── README.md                 # This file
 ```
 
 ## Technology Stack
 
-- **React**: UI library
-- **TypeScript**: Type safety and developer experience
-- **Vite**: Fast build tool and development server
-- **Recharts**: Chart visualization
-- **GSAP**: Animation library
-- **TailwindCSS**: Utility-first CSS framework
+- **Frontend**: React 18, TypeScript, Vite, TailwindCSS, Recharts, GSAP
+- **Backend**: Node.js, Express, Node-cron, Axios
+
+## API Endpoints
+
+- `GET /api/health` - Health check and server status
+- `GET /api/cache/status` - Get cache status and expiration info
+- `GET /api/cache/projects` - Retrieve cached projects
+- `POST /api/cache/projects` - Update projects cache
+- `DELETE /api/cache/clear` - Clear all cached data
 
 ## Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `VITE_ASANA_TOKEN` | Asana Personal Access Token for API authentication |
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `VITE_ASANA_TOKEN` | Asana Personal Access Token | Yes |
+| `VITE_GOOGLE_CLIENT_ID` | Google OAuth Client ID | No |
+| `PORT` | Server port (default: 8080) | No |
+
+## Troubleshooting
+
+### Port Already in Use
+
+The server automatically tries ports 8080-8090. Set a custom port:
+```bash
+PORT=9000 npm start
+```
+
+### Cache Issues
+
+Clear the cache:
+```bash
+curl -X DELETE http://localhost:8080/api/cache/clear
+```
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+MIT License
 
 ## Acknowledgments
 
-- [Asana API](https://developers.asana.com/docs) for providing the data endpoints
-- [Recharts](https://recharts.org) for the charting library
-- [GSAP](https://greensock.com/gsap/) for animations
-```
+- [Asana API](https://developers.asana.com/docs)
+- [Recharts](https://recharts.org)
+- [GSAP](https://greensock.com/gsap/)

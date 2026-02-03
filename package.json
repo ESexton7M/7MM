@@ -2,25 +2,16 @@
   "name": "asana-analytics-dashboard",
   "private": true,
   "version": "0.1.0",
-  "type": "commonjs",
   "main": "app.js",
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18.0.0"
   },
-  "workspaces": [
-    "analyzer"
-  ],
   "scripts": {
     "start": "node app.js",
-    "dev": "cd analyzer && npm run dev",
+    "install:all": "npm install && cd analyzer && npm install",
     "build": "cd analyzer && npm run build",
-    "lint": "cd analyzer && npm run lint",
-    "install:all": "npm install && cd analyzer && npm install && cd server && npm install",
-    "install:server": "cd analyzer/server && npm install",
-    "server:start": "cd analyzer/server && npm start",
-    "server:dev": "cd analyzer/server && npm run dev",
-    "deploy": "npm run install:all && npm run build && npm run start",
-    "deploy:plesk": "npm install && cd analyzer && npm install && cd server && npm install && cd .. && npm run build && echo 'Setup complete! Your app is ready at your domain.'"
+    "dev": "cd analyzer && npm run start",
+    "lint": "cd analyzer && npm run lint"
   },
   "dependencies": {
     "express": "^4.18.2",

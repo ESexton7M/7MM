@@ -1,3 +1,10 @@
+/**
+ * Asana Analytics Dashboard - Plesk Entry Point
+ * 
+ * Single entry point for Plesk Node.js deployment
+ * Serves both the API and the built frontend
+ */
+
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs').promises;
@@ -5,19 +12,22 @@ const path = require('path');
 
 const app = express();
 
-// Use environment PORT or default
-const PORT = process.env.PORT || 8080;
+// Plesk typically sets PORT via environment, fallback to 80 for production
+const PORT = process.env.PORT || 80;
 
 // Enable CORS for all routes
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-// Cache file paths - use analyzer/server/cache for consistency
+// Cache file paths - relative to this file's location
 const CACHE_DIR = path.join(__dirname, 'analyzer', 'server', 'cache');
 const PROJECTS_CACHE_FILE = path.join(CACHE_DIR, 'projects.json');
 const ANALYZED_CACHE_FILE = path.join(CACHE_DIR, 'analyzed.json');
 const CACHE_METADATA_FILE = path.join(CACHE_DIR, 'metadata.json');
 const PROJECT_TASKS_CACHE_DIR = path.join(CACHE_DIR, 'project_tasks');
+
+// Static files directory
+const DIST_DIR = path.join(__dirname, 'analyzer', 'dist');
 
 // Cache expiration time (2 days in milliseconds)
 const CACHE_EXPIRATION = 2 * 24 * 60 * 60 * 1000;
@@ -26,28 +36,16 @@ const CACHE_EXPIRATION = 2 * 24 * 60 * 60 * 1000;
 async function ensureCacheDir() {
   try {
     await fs.access(CACHE_DIR);
-    console.log('Cache directory exists:', CACHE_DIR);
   } catch (error) {
-    try {
-      await fs.mkdir(CACHE_DIR, { recursive: true });
-      console.log('Created cache directory:', CACHE_DIR);
-    } catch (mkdirError) {
-      console.error('Failed to create cache directory:', mkdirError);
-      throw mkdirError;
-    }
+    await fs.mkdir(CACHE_DIR, { recursive: true });
+    console.log('Created cache directory:', CACHE_DIR);
   }
   
   try {
     await fs.access(PROJECT_TASKS_CACHE_DIR);
-    console.log('Project tasks cache directory exists');
   } catch (error) {
-    try {
-      await fs.mkdir(PROJECT_TASKS_CACHE_DIR, { recursive: true });
-      console.log('Created project tasks cache directory');
-    } catch (mkdirError) {
-      console.error('Failed to create project tasks cache directory:', mkdirError);
-      throw mkdirError;
-    }
+    await fs.mkdir(PROJECT_TASKS_CACHE_DIR, { recursive: true });
+    console.log('Created project tasks cache directory');
   }
 }
 
@@ -83,43 +81,43 @@ function isCacheValid(timestamp) {
   return timestamp > 0 && (now - timestamp) < CACHE_EXPIRATION;
 }
 
-// API Routes
+// ============== API ROUTES ==============
 
 // Health check endpoint
 app.get('/api/health', async (req, res) => {
   try {
-    // Check if cache directory exists and is writable
-    let cacheDirExists = false;
-    let cacheDirWritable = false;
-    let cacheError = null;
+    const metadata = await getCacheMetadata();
+    const uptime = process.uptime();
     
+    let cacheStats = {};
     try {
-      await fs.access(CACHE_DIR);
-      cacheDirExists = true;
-      
-      // Try to write a test file
-      const testFile = path.join(CACHE_DIR, 'test.txt');
-      await fs.writeFile(testFile, 'test');
-      await fs.unlink(testFile);
-      cacheDirWritable = true;
-    } catch (err) {
-      cacheError = err.message;
+      const cacheFiles = await fs.readdir(CACHE_DIR);
+      cacheStats = {
+        directory: CACHE_DIR,
+        filesCount: cacheFiles.length,
+        hasProjects: cacheFiles.includes('projects.json'),
+        hasAnalyzed: cacheFiles.includes('analyzed.json'),
+        hasMetadata: cacheFiles.includes('metadata.json')
+      };
+    } catch (error) {
+      cacheStats = { error: 'Cache directory not accessible' };
     }
     
     res.json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
       server: {
+        uptime: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m`,
         port: PORT,
         environment: process.env.NODE_ENV || 'production',
+        nodeVersion: process.version,
         cwd: process.cwd()
       },
       cache: {
-        directory: CACHE_DIR,
-        isValid: true,
-        exists: cacheDirExists,
-        writable: cacheDirWritable,
-        error: cacheError
+        ...cacheStats,
+        isValid: isCacheValid(metadata.projectsTimestamp),
+        lastUpdate: metadata.projectsTimestamp > 0 ? new Date(metadata.projectsTimestamp).toISOString() : null,
+        projectCount: metadata.projectCount || 0
       }
     });
   } catch (error) {
@@ -127,10 +125,7 @@ app.get('/api/health', async (req, res) => {
     res.status(500).json({ 
       status: 'unhealthy',
       error: error.message,
-      timestamp: new Date().toISOString(),
-      cache: {
-        directory: CACHE_DIR
-      }
+      timestamp: new Date().toISOString()
     });
   }
 });
@@ -138,7 +133,6 @@ app.get('/api/health', async (req, res) => {
 // Get cache status
 app.get('/api/cache/status', async (req, res) => {
   try {
-    // Ensure cache directory exists before checking status
     await ensureCacheDir();
     
     const metadata = await getCacheMetadata();
@@ -178,11 +172,9 @@ app.get('/api/cache/status', async (req, res) => {
     });
   } catch (error) {
     console.error('Error getting cache status:', error);
-    console.error('Cache directory:', CACHE_DIR);
     res.status(500).json({ 
       error: 'Failed to get cache status',
-      message: error.message,
-      cacheDir: CACHE_DIR
+      message: error.message
     });
   }
 });
@@ -221,36 +213,22 @@ app.get('/api/cache/analyzed', async (req, res) => {
   }
 });
 
-// Get cached project tasks
+// Get cached tasks for a specific project
 app.get('/api/cache/project/:projectId/tasks', async (req, res) => {
   try {
     const { projectId } = req.params;
     const tasksCacheFile = path.join(PROJECT_TASKS_CACHE_DIR, `${projectId}.json`);
     
-    // Check if file exists and is valid
-    try {
-      const stats = await fs.stat(tasksCacheFile);
-      const fileAge = Date.now() - stats.mtime.getTime();
-      
-      if (fileAge > CACHE_EXPIRATION) {
-        return res.status(404).json({ error: 'Project tasks cache expired' });
-      }
-      
-      const data = await fs.readFile(tasksCacheFile, 'utf8');
-      res.json(JSON.parse(data));
-    } catch (error) {
-      res.status(404).json({ error: 'Project tasks not cached' });
-    }
+    const data = await fs.readFile(tasksCacheFile, 'utf8');
+    res.json(JSON.parse(data));
   } catch (error) {
-    console.error('Error reading project tasks cache:', error);
-    res.status(500).json({ error: 'Failed to read project tasks cache' });
+    res.status(404).json({ error: 'Project tasks cache not found' });
   }
 });
 
 // Save projects to cache
 app.post('/api/cache/projects', async (req, res) => {
   try {
-    // Ensure cache directory exists before writing
     await ensureCacheDir();
     
     const projects = req.body;
@@ -266,11 +244,9 @@ app.post('/api/cache/projects', async (req, res) => {
     res.json({ success: true, timestamp: metadata.projectsTimestamp });
   } catch (error) {
     console.error('Error saving projects cache:', error);
-    console.error('Cache directory:', CACHE_DIR);
     res.status(500).json({ 
       error: 'Failed to save cache',
-      message: error.message,
-      cacheDir: CACHE_DIR
+      message: error.message
     });
   }
 });
@@ -278,6 +254,8 @@ app.post('/api/cache/projects', async (req, res) => {
 // Save analyzed data to cache
 app.post('/api/cache/analyzed', async (req, res) => {
   try {
+    await ensureCacheDir();
+    
     const analyzedData = req.body;
     
     await fs.writeFile(ANALYZED_CACHE_FILE, JSON.stringify(analyzedData, null, 2));
@@ -297,7 +275,6 @@ app.post('/api/cache/analyzed', async (req, res) => {
 // Save project tasks to cache
 app.post('/api/cache/project/:projectId/tasks', async (req, res) => {
   try {
-    // Ensure cache directory exists before writing
     await ensureCacheDir();
     
     const { projectId } = req.params;
@@ -310,11 +287,9 @@ app.post('/api/cache/project/:projectId/tasks', async (req, res) => {
     res.json({ success: true, timestamp: Date.now() });
   } catch (error) {
     console.error('Error saving project tasks cache:', error);
-    console.error('Cache directory:', PROJECT_TASKS_CACHE_DIR);
     res.status(500).json({ 
       error: 'Failed to save project tasks cache',
-      message: error.message,
-      cacheDir: PROJECT_TASKS_CACHE_DIR
+      message: error.message
     });
   }
 });
@@ -360,21 +335,27 @@ app.delete('/api/cache/clear', async (req, res) => {
   }
 });
 
-// Serve static files from the analyzer/dist directory
-app.use(express.static(path.join(__dirname, 'analyzer', 'dist')));
+// ============== STATIC FILES ==============
 
-// Handle client-side routing
+// Serve static files from the built frontend
+app.use(express.static(DIST_DIR));
+
+// Handle client-side routing - serve index.html for all non-API routes
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'analyzer', 'dist', 'index.html'));
+  res.sendFile(path.join(DIST_DIR, 'index.html'));
 });
 
-// For Plesk/Passenger, export the app
+// ============== SERVER STARTUP ==============
+
+// Export for Plesk/Passenger
 module.exports = app;
 
-// If running directly (not through Passenger), start the server
+// Start server if run directly
 if (require.main === module) {
-  const server = app.listen(PORT, () => {
+  app.listen(PORT, () => {
     console.log(`Asana Analytics Server running on port ${PORT}`);
+    console.log(`Static files: ${DIST_DIR}`);
     console.log(`Cache directory: ${CACHE_DIR}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'production'}`);
   });
 }

@@ -17,6 +17,17 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
+          'charts': ['recharts'],
+          'animations': ['gsap', '@gsap/react'],
+          'utils': ['lucide-react']
+        }
+      }
+    },
+    chunkSizeWarningLimit: 600
   }
 })
