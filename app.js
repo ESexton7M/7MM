@@ -377,18 +377,8 @@ function startServer(port, maxRetries = 10) {
   return server;
 }
 
-// Check if running under Phusion Passenger (Plesk)
-if (typeof(PhusionPassenger) !== 'undefined') {
-  // Passenger mode
-  PhusionPassenger.configure({ autoInstall: false });
-  
-  // Passenger provides a socket path instead of a port
-  app.listen('passenger', () => {
-    console.log('Running under Phusion Passenger');
-    console.log(`Static files: ${DIST_DIR}`);
-    console.log(`Cache directory: ${CACHE_DIR}`);
-  });
-} else if (require.main === module) {
-  // Direct execution - start server ourselves
-  startServer(PORT);
-}
+// Export for potential require() usage
+module.exports = app;
+
+// Always start the server - Plesk/Passenger sets PORT env var
+startServer(PORT);
