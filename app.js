@@ -377,7 +377,16 @@ function startServer(port, maxRetries = 10) {
   return server;
 }
 
-// Start server if run directly
-if (require.main === module) {
+// Check if running under Phusion Passenger
+if (typeof(PhusionPassenger) !== 'undefined') {
+  // Passenger mode - let Passenger handle the server
+  PhusionPassenger.configure({ autoInstall: false });
+  
+  // Passenger will call listen() for us
+  console.log('Running under Phusion Passenger');
+  console.log(`Static files: ${DIST_DIR}`);
+  console.log(`Cache directory: ${CACHE_DIR}`);
+} else if (require.main === module) {
+  // Direct execution - start server ourselves
   startServer(PORT);
 }
