@@ -12,8 +12,9 @@ const path = require('path');
 
 const app = express();
 
-// Plesk typically sets PORT via environment, fallback to 80 for production
-const PORT = process.env.PORT || 80;
+// Plesk/Passenger sets PORT via environment
+// Default to 3000 for manual testing (80 is used by Apache/nginx)
+const PORT = process.env.PORT || 3000;
 
 // Enable CORS for all routes
 app.use(cors());
