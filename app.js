@@ -13,7 +13,7 @@ const path = require('path');
 const app = express();
 
 // Plesk/Passenger sets PORT via environment
-// Default to 3000 for manual testing (80 is used by Apache/nginx)
+// Default to 3000 for manual testing, with automatic fallback
 const PORT = process.env.PORT || 3000;
 
 // Enable CORS for all routes
@@ -351,12 +351,33 @@ app.get('*', (req, res) => {
 // Export for Plesk/Passenger
 module.exports = app;
 
-// Start server if run directly
-if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`Asana Analytics Server running on port ${PORT}`);
+// Start server with automatic port fallback
+function startServer(port, maxRetries = 10) {
+  const server = app.listen(port, () => {
+    console.log(`Asana Analytics Server running on port ${port}`);
     console.log(`Static files: ${DIST_DIR}`);
     console.log(`Cache directory: ${CACHE_DIR}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'production'}`);
   });
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE' && maxRetries > 0) {
+      console.log(`Port ${port} in use, trying ${port + 1}...`);
+      server.close();
+      startServer(port + 1, maxRetries - 1);
+    } else if (err.code === 'EADDRINUSE') {
+      console.error(`Could not find available port after trying ${PORT} to ${port}`);
+      process.exit(1);
+    } else {
+      console.error('Server error:', err);
+      process.exit(1);
+    }
+  });
+
+  return server;
+}
+
+// Start server if run directly
+if (require.main === module) {
+  startServer(PORT);
 }
