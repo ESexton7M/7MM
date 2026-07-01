@@ -67,18 +67,18 @@ export function calculateRange(values: number[]): number {
  * @returns Skewness value (negative = left-skewed, positive = right-skewed)
  */
 export function calculateSkewness(values: number[]): number {
-  if (values.length === 0) return 0;
-  
+  // Sample skewness uses n/((n-1)(n-2)) which is undefined for n < 3.
+  if (values.length < 3) return 0;
+
   const mean = calculateMean(values);
   const stdDev = calculateStandardDeviation(values);
-  
   if (stdDev === 0) return 0;
-  
+
   const n = values.length;
   const skewSum = values.reduce((sum, value) => {
     return sum + Math.pow((value - mean) / stdDev, 3);
   }, 0);
-  
+
   return (n / ((n - 1) * (n - 2))) * skewSum;
 }
 

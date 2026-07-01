@@ -1,140 +1,127 @@
 # Asana Analytics Dashboard
 
-A comprehensive React TypeScript application for visualizing and analyzing Asana project data, providing insights into task completion times, project durations, and workflow metrics.
+A React/TypeScript dashboard for visualizing Asana project data — task completion times, project durations, section progressions, and workflow metrics.
 
-<img width="1920" height="3677" alt="screencapture-analytics-7mountainscreative-2025-09-18-14_05_13" src="https://github.com/user-attachments/assets/dbf56cc4-5d6b-4e3c-9c81-e1b6c13cb0be" />
+<img width="1920" height="3677" alt="dashboard screenshot" src="https://github.com/user-attachments/assets/dbf56cc4-5d6b-4e3c-9c81-e1b6c13cb0be" />
 
-## Features
+## Architecture
 
-- **Project Data Visualization**: View task completion metrics and analyze project efficiency
-- **Cross-Project Analysis**: Compare durations across multiple projects with filtering and sorting options
-- **Section Completion Analytics**: Break down project stages to identify bottlenecks and optimize workflows
-- **Server-Side Caching**: Persistent cache with automatic 2-day refresh cycle
-- **Interactive Charts**: Visualize data through responsive, interactive charts powered by Recharts
-- **Smooth Animations**: Enhanced user experience with GSAP animations
-- **Responsive Design**: Works seamlessly on desktop and mobile devices
-- **TypeScript Integration**: Full type safety throughout the application
+The browser never talks to Asana directly and never holds an API token.
 
-## Quick Start
+- **Server (`app.js`)** owns the Asana Personal Access Token, fetches projects/tasks/stories from Asana, enriches each task with `first_activity_at` and `assigned_at` derived from story history, and persists the result to `analyzer/server/cache/`.
+- A `node-cron` job re-runs the refresh every `REFRESH_INTERVAL_DAYS` (default 2). A manual `POST /api/cache/refresh` triggers it on demand.
+- **Frontend (`analyzer/src`)** reads exclusively from `/api/cache/*`. There is no `VITE_ASANA_TOKEN`; the bundle shipped to browsers contains no Asana secrets.
+
+The cache directory (`analyzer/server/cache/`) is gitignored — it is server runtime state, not version-controlled data.
+
+## Quick start
 
 ### Prerequisites
+- Node.js 18+
+- An Asana Personal Access Token (server-side, from your [Asana Developer Console](https://app.asana.com/0/developer-console))
 
-- Node.js (v16 or higher)
-- npm
-- Asana Personal Access Token
-- Google OAuth Client ID (optional)
+### Install
+```bash
+npm run install:all
+```
 
-### Installation
+### Configure
+Create `.env` at the project root (NOT `analyzer/.env`):
+```env
+ASANA_TOKEN=your_asana_personal_access_token
+PORT=8080
+# Optional:
+# ASANA_API_BASE=https://app.asana.com/api/1.0
+# REFRESH_INTERVAL_DAYS=2
+# REFRESH_SECRET=some_long_random_string
+# ENRICH_CONCURRENCY=5
+```
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/asana-analytics-dashboard.git
-   cd asana-analytics-dashboard
-   ```
+Optionally create `analyzer/.env` with Google OAuth client ID:
+```env
+VITE_GOOGLE_CLIENT_ID=your_google_oauth_client_id
+```
 
-2. Install all dependencies:
-   ```bash
-   npm run install:all
-   ```
+See `.env.example` and `analyzer/.env.example` for the full list.
 
-3. Configure environment variables in `analyzer/.env`:
-   ```
-   VITE_ASANA_TOKEN=your_personal_access_token
-   VITE_GOOGLE_CLIENT_ID=your_google_client_id
-   VITE_ASANA_API_BASE=https://app.asana.com/api/1.0
-   ```
-   
-   > **Note**: Generate an Asana Personal Access Token in your [Asana Developer Console](https://app.asana.com/0/developer-console).
+### Run
 
-### Running the Application
-
-#### Development Mode
-
-Start both the backend server and frontend development server:
+**Development (server + Vite dev server with HMR):**
 ```bash
 npm run dev
 ```
+Runs `app.js` on port 8080 and Vite on port 3000 with `/api` proxied to the server.
 
-This will:
-- Start the API server on http://localhost:8080
-- Start the Vite dev server on http://localhost:3000
-- Open the application in your browser automatically
+**Production build:**
+```bash
+npm run build
+npm start
+```
+The server serves the built frontend from `analyzer/dist/` on `PORT` (default 8080).
 
-#### Production Mode
+**Force a server-side refresh:**
+- Click the **Refresh from Asana** button in the dashboard.
+- Or: `npm run refresh` (calls `POST /api/cache/refresh` on `localhost:8080`).
+- Or: `curl -X POST http://localhost:8080/api/cache/refresh`
 
-1. Build the application:
-   ```bash
-   npm run build
-   ```
+## Deployment (Plesk/Passenger)
 
-2. Start the server:
-   ```bash
-   npm start
-   ```
+The repo is set up for Plesk Node.js hosting:
+- `app.js` is the application entry point (`package.json` `"main"`).
+- Plesk's Node app panel sets `PORT` automatically; `app.js` honors it.
+- Set `ASANA_TOKEN` (and any other config) in **Plesk → Node.js → Custom Environment Variables**.
+- After the first deploy the server will background-fetch the Asana cache on startup if it's missing or stale, and on the cron schedule thereafter.
 
-## Project Structure
+**You no longer need to build locally and commit cache files to refresh data.** The deployed server pulls from Asana itself.
+
+## API endpoints
+
+| Method | Path | Notes |
+|--------|------|-------|
+| GET | `/api/health` | Server status, cache freshness, config (without secrets), last refresh result |
+| GET | `/api/cache/status` | Cache age, expiration, refresh state |
+| GET | `/api/cache/projects` | Cached project list (404 if cache empty/expired) |
+| GET | `/api/cache/project/:gid/tasks` | Cached tasks for a project, with enriched activity dates |
+| GET | `/api/cache/analyzed` | Legacy; the server no longer writes this and it normally returns 404 |
+| POST | `/api/cache/refresh` | Trigger a refresh. Returns 202 immediately; poll status to detect completion. Requires `x-refresh-secret` header if `REFRESH_SECRET` is set. |
+| DELETE | `/api/cache/clear` | Wipe cache files. Same secret guard as refresh. |
+
+## Project structure
 
 ```
 7MM/
-├── analyzer/                 # Main application
-│   ├── src/                  # React TypeScript source
-│   │   ├── components/       # UI components
-│   │   ├── hooks/            # Custom React hooks
-│   │   ├── types/            # TypeScript definitions
-│   │   ├── utils/            # Utility functions
-│   │   └── config/           # Configuration files
-│   ├── server/               # Backend API server
-│   │   ├── server.js         # Express server with caching
-│   │   └── cache/            # Server-side cache storage
-│   ├── public/               # Static assets
-│   └── dist/                 # Built application (generated)
-├── package.json              # Root package configuration
-└── README.md                 # This file
+├── app.js                       # Express server: serves dist + cache API + Asana fetch + cron
+├── package.json                 # Server deps and scripts
+├── .env.example                 # Server-side env vars (token, port, refresh interval)
+└── analyzer/
+    ├── src/                     # React TypeScript frontend
+    │   ├── components/
+    │   ├── hooks/
+    │   ├── utils/serverCache.ts # Frontend wrapper over /api/cache/* endpoints
+    │   ├── config/
+    │   └── types/
+    ├── server/cache/            # GITIGNORED — server-managed runtime cache
+    ├── public/
+    ├── dist/                    # Built frontend (gitignored, generated by `npm run build`)
+    ├── package.json             # Frontend deps and scripts
+    └── .env.example             # Client-side env vars (Google OAuth only)
 ```
 
-## Technology Stack
-
+## Tech stack
+- **Server**: Node 18+, Express, axios, node-cron, dotenv
 - **Frontend**: React 18, TypeScript, Vite, TailwindCSS, Recharts, GSAP
-- **Backend**: Node.js, Express, Node-cron, Axios
-
-## API Endpoints
-
-- `GET /api/health` - Health check and server status
-- `GET /api/cache/status` - Get cache status and expiration info
-- `GET /api/cache/projects` - Retrieve cached projects
-- `POST /api/cache/projects` - Update projects cache
-- `DELETE /api/cache/clear` - Clear all cached data
-
-## Environment Variables
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `VITE_ASANA_TOKEN` | Asana Personal Access Token | Yes |
-| `VITE_GOOGLE_CLIENT_ID` | Google OAuth Client ID | No |
-| `PORT` | Server port (default: 8080) | No |
 
 ## Troubleshooting
 
-### Port Already in Use
+**Cache is stale / nothing is updating**
+- Check `/api/health` and look at `config.hasAsanaToken`. If `false`, `ASANA_TOKEN` isn't reaching the server process. In Plesk, restart the Node app after editing env vars.
+- Check `refresh.lastError` for the most recent failure reason.
 
-The server automatically tries ports 8080-8090. Set a custom port:
-```bash
-PORT=9000 npm start
-```
+**Port already in use**
+- `app.js` will probe the next 10 ports if its requested port is busy. Or set `PORT=<port>` explicitly.
 
-### Cache Issues
-
-Clear the cache:
-```bash
-curl -X DELETE http://localhost:8080/api/cache/clear
-```
+**Clean install fails**
+- Make sure you ran `npm run install:all` (installs both root and `analyzer` deps).
 
 ## License
-
-MIT License
-
-## Acknowledgments
-
-- [Asana API](https://developers.asana.com/docs)
-- [Recharts](https://recharts.org)
-- [GSAP](https://greensock.com/gsap/)
+MIT

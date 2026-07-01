@@ -15,166 +15,27 @@ import {
 } from './utils/statistics';
 
 // Import types
-import type { 
-  Task, 
-  ProjectData, 
+import type {
+  Task,
+  ProjectData,
   ProjectDuration,
   Stats,
   CustomFieldValue
 } from './types';
 
-// Import environment utilities
-import { loadEnvConfig } from './utils/env';
-
-/**
- * Fetch task stories and find the first meaningful activity date.
- * 
- * PRIORITY ORDER (highest first):
- * 1. Comments - strongest signal of actual work
- * 2. Marked complete/incomplete - definitely worked on
- * 3. Assignments - someone took ownership (only if >5min after creation)
- * 4. "In Progress" status changes - work started
- * 5. Section moves to active sections (only if >5min after creation)
- * 
- * EXCLUDED:
- * - Task creation / "added to project"
- * - Unassignment
- * - "Not Started" status changes
- * - System-generated stories
- * - Due date changes (can happen before work starts)
- * - Any activity within 5 minutes of creation (likely initial setup)
- */
-async function fetchFirstMeaningfulActivity(
-  taskGid: string, 
-  apiBase: string, 
-  token: string,
-  taskCreatedAt?: string  // Pass task creation date to filter out creation-adjacent activities
-): Promise<string | null> {
-  // Minimum time after creation (5 minutes) before we consider activity as "real work"
-  const CREATION_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
-  
-  try {
-    const storiesResponse = await fetch(
-      `${apiBase}/tasks/${taskGid}/stories?opt_fields=created_at,resource_type,resource_subtype,text,type`,
-      { headers: { 'Authorization': `Bearer ${token}` } }
-    );
-    
-    if (!storiesResponse.ok) return null;
-    
-    const storiesData = await storiesResponse.json();
-    const stories = storiesData.data || [];
-    
-    const taskCreationTime = taskCreatedAt ? new Date(taskCreatedAt).getTime() : 0;
-    
-    // Find the first story that represents meaningful activity
-    for (const story of stories) {
-      if (!story.created_at) continue;
-      
-      const storyTime = new Date(story.created_at).getTime();
-      const text = (story.text || '').toLowerCase();
-      const subtype = story.resource_subtype || '';
-      
-      // Check if this activity is within the creation window (likely setup, not work)
-      const isWithinCreationWindow = taskCreationTime > 0 && (storyTime - taskCreationTime) < CREATION_WINDOW_MS;
-      
-      // === SKIP these story types (not meaningful activity) ===
-      
-      // Skip creation stories
-      if (subtype === 'added_to_project') continue;
-      if (text.includes('created this task')) continue;
-      if (text.includes('added this task')) continue;
-      
-      // Skip unassignment stories
-      if (text.includes('unassigned') || text.includes('removed assignee')) continue;
-      if (text.includes('removed from')) continue;
-      
-      // Skip "Not Started" status changes
-      if (text.includes('not started')) continue;
-      if (text.includes('to do')) continue;
-      if (text.includes('backlog')) continue;
-      
-      // Skip due date changes (can happen before work starts)
-      if (subtype === 'due_date_changed') continue;
-      if (text.includes('changed the due date')) continue;
-      if (text.includes('set the due date')) continue;
-      
-      // Skip name/description changes at creation time
-      if (subtype === 'name_changed' || subtype === 'description_changed' || subtype === 'notes_changed') continue;
-      
-      // === ACCEPT these story types (meaningful activity) ===
-      
-      // PRIORITY 1: Comments - ALWAYS meaningful, even within creation window
-      if (subtype === 'comment_added' || story.type === 'comment') {
-        return story.created_at;
-      }
-      
-      // PRIORITY 2: Marked complete/incomplete - ALWAYS meaningful
-      if (subtype === 'marked_complete' || subtype === 'marked_incomplete') {
-        return story.created_at;
-      }
-      
-      // PRIORITY 3: Assignments - always meaningful (someone took ownership)
-      if (subtype === 'assigned' || text.includes('assigned to') || text.includes('assigned this task')) {
-        return story.created_at;
-      }
-      
-      // PRIORITY 4: "In Progress" or active status changes
-      if (subtype === 'enum_custom_field_changed') {
-        // Check for progress field changes to active states
-        if (text.includes('in progress') || 
-            text.includes('in review') || 
-            text.includes('working') ||
-            text.includes('started') ||
-            text.includes('active')) {
-          return story.created_at;
-        }
-        // Skip if it's "not started" or similar inactive states
-        continue;
-      }
-      
-      // PRIORITY 5: Section moves - skip if within creation window (likely initial placement)
-      if (subtype === 'section_changed' || text.includes('moved this task') || text.includes('moved to')) {
-        // Skip moves to backlog/inbox/not started sections always
-        if (text.includes('backlog') || text.includes('inbox') || text.includes('not started')) {
-          continue;
-        }
-        // Skip ANY section move within creation window (initial placement)
-        if (isWithinCreationWindow) continue;
-        
-        // Accept section moves after creation window
-        return story.created_at;
-      }
-      
-      // PRIORITY 6: Attachments (someone added work product)
-      if (subtype === 'attachment_added' || text.includes('attached')) {
-        return story.created_at;
-      }
-      
-      // SKIP: All subtask-related activities (they disrupt the scheme)
-      if (subtype === 'subtask_added' || text.includes('subtask')) {
-        continue;
-      }
-      
-      // Skip everything else - be conservative
-    }
-    
-    return null;
-  } catch (err) {
-    console.warn(`Could not fetch stories for task ${taskGid}:`, err);
-    return null;
-  }
-}
-
+// First-activity-detection used to live here and run from the browser.
+// It now lives on the server (see app.js: findFirstMeaningfulActivity) so
+// the token never reaches the client. Cached task data already includes
+// `first_activity_at` and `assigned_at` populated by the server's cron job.
 
 // --- Main App Component ---
 export default function App() {
-    // Load environment configuration
-    const envConfig = loadEnvConfig();
-    const ASANA_API_BASE = envConfig.ASANA_API_BASE;
-    
-    // State for authentication and project selection
-    const [token] = useState<string>(envConfig.ASANA_TOKEN);
+    // State for authentication and project selection.
+    // All Asana fetching now happens server-side; the frontend reads from
+    // /api/cache/* and never holds an Asana token.
     const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+    const [refreshing, setRefreshing] = useState<boolean>(false);
+    const [refreshMessage, setRefreshMessage] = useState<string>('');
     const [projects, setProjects] = useState<Task[]>([]);
     const [selectedProjectGid, setSelectedProjectGid] = useState<string>('');
     const [projectData, setProjectData] = useState<ProjectData | null>(null);
@@ -225,10 +86,10 @@ export default function App() {
             end: defaultEnd.toISOString().split('T')[0] ?? ''
         });
 
-        // Automatically fetch projects if token is available
-        if (token) {
-            handleFetchProjects();
-        }
+        // Load whatever is in the server cache on mount. Refresh from
+        // Asana is the server's job (cron + manual trigger via "Refresh
+        // from Asana" button).
+        handleFetchProjects();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -299,13 +160,10 @@ export default function App() {
             
             // Apply e-commerce filter
             if (ecommerceFilter && ecommerceFilter !== 'all') {
-                console.log('Applying e-commerce filter:', ecommerceFilter);
                 filtered = filtered.filter(project => {
                     const projectEcommerce = String(project.ecommerce || 'No');
-                    console.log(`Project: ${project.name}, E-commerce value: "${projectEcommerce}", Filter: "${ecommerceFilter}", Match: ${projectEcommerce === ecommerceFilter}`);
                     return projectEcommerce === ecommerceFilter;
                 });
-                console.log('Filtered count after e-commerce filter:', filtered.length);
             }
             
             // Apply date range filter
@@ -381,112 +239,19 @@ export default function App() {
 
 
 
-    // Automatically re-run analyzeAllProjects when sort method changes and projects have been analyzed at least once
-    // Place this after analyzeAllProjects is defined
-    // Helper: Extract section from task name (customize as needed)
-    function getSectionFromTask(task: Task): string {
-        // Example: Task name contains section, e.g. "Section: Onboarding - ..."
-        if (!task.name) return 'Unknown';
-        // Try to match 'Section: <name>' or '<name> Section' or '[Section] <name>'
-        const match = task.name.match(/Section[:\s-]+([\w ]+)/i);
-        if (match && typeof match[1] === 'string') return match[1].trim();
-        // Fallback: use first word as section
-        const fallback = task.name.match(/^(\w+)/);
-        return (fallback && typeof fallback[1] === 'string') ? fallback[1] : 'Unknown';
-    }
-
-    // Helper: Calculate both total and incremental completion times per section
-    const calculateSectionDurations = useCallback((tasks: Task[]): {
-        totalDurations: { section: string; avgDuration: number }[];
-        incrementalDurations: { section: string; avgDuration: number }[];
-    } => {
-        // First, organize tasks by section and calculate their durations
-        const sectionMap: Record<string, { durations: number[]; completionDates: Date[] }> = {};
-        
-        tasks.forEach(task => {
-            if (task.completed && task.completed_at && task.created_at) {
-                const section = getSectionFromTask(task);
-                const created = new Date(task.created_at);
-                const completed = new Date(task.completed_at);
-                const duration = (completed.getTime() - created.getTime()) / (1000 * 3600 * 24); // days
-                
-                if (!sectionMap[section]) {
-                    sectionMap[section] = { durations: [], completionDates: [] };
-                }
-                sectionMap[section].durations.push(duration);
-                sectionMap[section].completionDates.push(completed);
-            }
-        });
-
-        // Calculate average total durations for each section
-        const totalDurations = Object.entries(sectionMap).map(([section, data]) => ({
-            section,
-            avgDuration: data.durations.length > 0 
-                ? Math.round(data.durations.reduce((a, b) => a + b, 0) / data.durations.length)
-                : 0
-        }));
-
-        // Sort sections by average completion date
-        const sectionsByTime = Object.entries(sectionMap)
-            .map(([section, data]) => ({
-                section,
-                avgCompletionTime: data.completionDates.reduce((a, b) => a + b.getTime(), 0) / data.completionDates.length
-            }))
-            .sort((a, b) => a.avgCompletionTime - b.avgCompletionTime);
-
-        // Calculate incremental durations
-        const incrementalDurations = sectionsByTime.map((sectionInfo, index) => {
-            const currentTotal = totalDurations.find(d => d.section === sectionInfo.section)?.avgDuration ?? 0;
-            let previousTotal = 0;
-            const prevSectionObj = index > 0 ? sectionsByTime[index - 1] : undefined;
-            if (prevSectionObj && typeof prevSectionObj.section === 'string') {
-                previousTotal = totalDurations.find(d => d.section === prevSectionObj.section)?.avgDuration ?? 0;
-            }
-            return {
-                section: sectionInfo.section,
-                avgDuration: Math.max(0, currentTotal - previousTotal) // Ensure we don't return negative values
-            };
-        });
-
-        return {
-            totalDurations: totalDurations.sort((a, b) => b.avgDuration - a.avgDuration),
-            incrementalDurations
-        };
-    }, []);
-
-    // Helper: Calculate span from first to last completion in each section
-    const calculateSectionCompletionSpans = useCallback((tasks: Task[]): { section: string; span: number }[] => {
-        const sectionMap: Record<string, Date[]> = {};
-        tasks.forEach(task => {
-            if (task.completed && task.completed_at) {
-                const section = getSectionFromTask(task);
-                const completed = new Date(task.completed_at);
-                if (!sectionMap[section]) sectionMap[section] = [];
-                sectionMap[section].push(completed);
-            }
-        });
-        return Object.entries(sectionMap).map(([section, completions]) => {
-            if (completions.length < 2) return { section, span: 0 };
-            const min = Math.min(...completions.map(d => d.getTime()));
-            const max = Math.max(...completions.map(d => d.getTime()));
-            return {
-                section,
-                span: Math.round((max - min) / (1000 * 3600 * 24))
-            };
-        }).sort((a, b) => b.span - a.span);
-    }, []);
+    // Section duration / span calculations live in ComparisonTabs now;
+    // the helpers that used to live here (getSectionFromTask,
+    // calculateSectionDurations, calculateSectionCompletionSpans) were dead.
 
     // Helper: Extract website type from custom fields
     const getWebsiteType = useCallback((project: any): string => {
         // Debug: log the project custom fields
-        console.log('Project custom fields for', project.name, ':', project.custom_fields);
         
         // Check project-level custom fields first
         if (project.custom_fields && project.custom_fields.length > 0) {
             const typeField = project.custom_fields.find((cf: CustomFieldValue) => 
                 cf.name?.toLowerCase() === 'type'
             );
-            console.log('Found type field:', typeField);
             if (typeField) {
                 return typeField.display_value || typeField.text_value || 'N/A';
             }
@@ -501,7 +266,6 @@ export default function App() {
             const priceField = project.custom_fields.find((cf: CustomFieldValue) => 
                 cf.name?.toLowerCase() === 'sale price'
             );
-            console.log('Found price field:', priceField);
             if (priceField) {
                 if (priceField.number_value !== undefined && priceField.number_value !== null) {
                     return priceField.number_value;
@@ -531,12 +295,10 @@ export default function App() {
             );
             if (ecommerceField) {
                 const value = ecommerceField.display_value || ecommerceField.text_value;
-                console.log('E-commerce field value for', project.name, ':', value);
                 // Return the value or default to 'No' if field exists but has no value
                 return value || 'No';
             }
         }
-        console.log('No e-commerce field found for', project.name, ', defaulting to No');
         return 'No';
     }, []);
 
@@ -547,50 +309,49 @@ export default function App() {
         const dayOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
         const tasksCompletedByDay = dayOfWeek.map(day => ({ name: day, completed: 0 }));
         const tasksCreatedByDay = dayOfWeek.map(day => ({ name: day, created: 0 }));
-        const today = new Date();
-        const oneWeekAgo = new Date();
-        oneWeekAgo.setDate(today.getDate() - 7);
-        
+
         let earliestCreatedDate: Date | null = null;
         let latestCompletedDate: Date | null = null;
-        
+
         tasks.forEach((task: Task) => {
             const createdAt = new Date(task.created_at);
-            
-            // Track earliest created date
+            if (isNaN(createdAt.getTime())) return;
+
             if (!earliestCreatedDate || createdAt < earliestCreatedDate) {
                 earliestCreatedDate = createdAt;
             }
-            
+
+            // Day-of-week histogram across the project's entire lifetime
+            // (the previous "last 7 days" window was effectively meaningless
+            // for older/completed projects - one task per day-of-week at most).
             const createdDay = createdAt.getDay();
-            if (createdDay >= 0 && createdDay < tasksCreatedByDay.length && createdAt > oneWeekAgo) {
+            if (createdDay >= 0 && createdDay < tasksCreatedByDay.length) {
                 if (tasksCreatedByDay[createdDay]) tasksCreatedByDay[createdDay].created++;
             }
             if (task.completed && task.completed_at) {
                 completedCount++;
                 const completedAt = new Date(task.completed_at);
-                
-                // Track latest completed date
+                if (isNaN(completedAt.getTime())) return;
+
                 if (!latestCompletedDate || completedAt > latestCompletedDate) {
                     latestCompletedDate = completedAt;
                 }
-                
+
                 const completedDay = completedAt.getDay();
-                if (completedDay >= 0 && completedDay < tasksCompletedByDay.length && completedAt > oneWeekAgo) {
+                if (completedDay >= 0 && completedDay < tasksCompletedByDay.length) {
                     if (tasksCompletedByDay[completedDay]) tasksCompletedByDay[completedDay].completed++;
                 }
                 const timeDiff = completedAt.getTime() - createdAt.getTime();
                 completionTimes.push(timeDiff / (1000 * 3600 * 24)); // in days
             }
         });
-        
-        // Calculate project duration (from start to completion)
+
         let projectDurationDays = 0;
         if (earliestCreatedDate && latestCompletedDate) {
             const durationMs = (latestCompletedDate as Date).getTime() - (earliestCreatedDate as Date).getTime();
             projectDurationDays = Math.round(durationMs / (1000 * 3600 * 24));
         }
-        
+
         const totalCompletionTime = completionTimes.reduce((acc, time) => acc + time, 0);
         const avgCompletionTimeDays = completionTimes.length > 0
             ? Math.round(totalCompletionTime / completionTimes.length)
@@ -602,177 +363,63 @@ export default function App() {
             avgCompletionTimeDays,
             totalCompletionTimeDays: projectDurationDays
         };
-        const taskTableData = tasks.map((task: Task) => ({
-            ...task,
-            created_at: new Date(task.created_at).toLocaleDateString(),
-            completed_at: task.completed_at ? new Date(task.completed_at).toLocaleDateString() : null,
-        })).sort((a: Task, b: Task) => {
-            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        });
-    // Section durations are now handled in the ComparisonTabs component
+        // Sort by the original ISO created_at (parseable across all locales),
+        // THEN format for display. The previous version parsed
+        // toLocaleDateString() output back through new Date(), which is
+        // locale-dependent and silently produces wrong/Invalid dates on
+        // non-US locales.
+        const taskTableData = [...tasks]
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .map((task: Task) => ({
+                ...task,
+                created_at: new Date(task.created_at).toLocaleDateString(),
+                completed_at: task.completed_at ? new Date(task.completed_at).toLocaleDateString() : null,
+            }));
         setProjectData({
             stats,
             taskTableData,
             tasksCompletedByDay,
             tasksCreatedByDay
         });
-    }, [calculateSectionDurations, calculateSectionCompletionSpans]);
+    }, []);
 
-    // Helper to calculate project durations with sorting
+    // Build project duration analytics from server-cached data only.
+    // The server fetches Asana on a cron schedule and on-demand via
+    // POST /api/cache/refresh; the client never holds a token.
     const analyzeAllProjects = useCallback(async () => {
-        if (!token) {
-            setAnalysisError('Please enter your Asana Personal Access Token.');
-            return;
-        }
         setAnalyzing(true);
         setAnalysisError('');
         try {
-            // Import the project filter utility and server cache utilities
             const { filterSkippedProjects } = await import('./utils/projectFilter');
-            const { 
-                isCacheValid, 
-                getCachedProjects, 
-                cacheProjects,
+            const {
+                isCacheValid,
+                getCachedProjects,
                 getCachedProjectTasks,
-                cacheProjectTasks,
-                getCachedAnalyzedData,
-                cacheAnalyzedData,
-                clearExpiredCache
             } = await import('./utils/serverCache');
-            
-            // Clear expired cache first
-            await clearExpiredCache();
-            
-            // First check if we have valid cached analysis data
-            const cachedAnalyzedData = await getCachedAnalyzedData();
-            if (await isCacheValid() && cachedAnalyzedData && cachedAnalyzedData.length > 0) {
-                console.log('Using cached analyzed data');
-                // Keep all projects including in-progress ones (duration: 0)
-                const sorted = [...cachedAnalyzedData];
-                sortProjectDurations(sorted, projectSort);
-                setProjectDurations(sorted);
+
+            if (!(await isCacheValid())) {
+                setAnalysisError('Server cache is empty or expired. Click "Refresh from Asana" to populate it.');
                 setAnalyzing(false);
                 return;
             }
-            
-            // Check if we have valid cached projects
-            let projectsList = [];
-            if (await isCacheValid() && (await getCachedProjects()).length > 0) {
-                console.log('Using cached project data');
-                projectsList = filterSkippedProjects(await getCachedProjects());
-            } else {
-                // Step 1: Fetch all workspaces to ensure we don't miss any projects
-                const workspacesResponse = await fetch(`${ASANA_API_BASE}/workspaces?opt_fields=name,gid`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (!workspacesResponse.ok) throw new Error(`API Error: ${workspacesResponse.statusText}`);
-                const workspacesResult = await workspacesResponse.json();
-                
-                // Step 2: Fetch projects from each workspace
-                const allProjects = [];
-                for (const workspace of workspacesResult.data) {
-                    const projectsResponse = await fetch(`${ASANA_API_BASE}/projects?workspace=${workspace.gid}&opt_fields=name,gid,archived,custom_fields.name,custom_fields.display_value,custom_fields.text_value,custom_fields.number_value`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    
-                    if (projectsResponse.ok) {
-                        const projectsResult = await projectsResponse.json();
-                        // Only include non-archived projects
-                        const activeProjects = projectsResult.data.filter((p: Task & { archived?: boolean }) => !p.archived);
-                        allProjects.push(...activeProjects);
-                    } else {
-                        console.warn(`Could not fetch projects for workspace ${workspace.name}: ${projectsResponse.statusText}`);
-                    }
-                }
-                
-                // Cache the raw projects data
-                await cacheProjects(allProjects);
-                
-                // Step 3: Apply skip list filtering
-                projectsList = filterSkippedProjects(allProjects);
-                console.log(`Found ${allProjects.length} total projects, analyzing ${projectsList.length} after filtering`);
+
+            const cachedProjects = await getCachedProjects();
+            if (cachedProjects.length === 0) {
+                setAnalysisError('No projects found in the server cache. Click "Refresh from Asana" to populate it.');
+                setAnalyzing(false);
+                return;
             }
-            
-            // Step 4: Fetch all tasks for each project with retry logic
-            const allTasksResults = [];
+            const projectsList = filterSkippedProjects(cachedProjects);
+
+            // Pull tasks per project from the cache. Tasks are pre-enriched
+            // server-side with first_activity_at and assigned_at.
+            const allTasksResults: { project: Task; tasks: Task[] }[] = [];
             for (const project of projectsList) {
                 try {
-                    // First check the cache for this project's tasks
-                    let projectTasks = await getCachedProjectTasks(project.gid);
-                    let needsActivityFetch = false;
-                    
-                    if (!projectTasks) {
-                        // Fetch tasks if not in cache
-                        console.log(`🔄 App.tsx: Fetching tasks from Asana API for project "${project.name}"...`);
-                        const tasksResponse = await fetch(`${ASANA_API_BASE}/tasks?project=${project.gid}&opt_fields=created_at,completed,completed_at,name,custom_fields,projects&limit=100`, {
-                            headers: { 'Authorization': `Bearer ${token}` }
-                        });
-                        
-                        if (tasksResponse.ok) {
-                            const tasksResult = await tasksResponse.json();
-                            projectTasks = tasksResult.data || [];
-                            needsActivityFetch = true; // New tasks need activity dates
-                            console.log(`✅ App.tsx: Fetched ${(projectTasks || []).length} tasks for "${project.name}"`);
-                        } else {
-                            console.warn(`❌ Could not fetch tasks for project ${project.name}: ${tasksResponse.statusText}`);
-                            projectTasks = [];
-                        }
-                    } else {
-                        console.log(`📦 App.tsx: Using ${projectTasks.length} cached tasks for "${project.name}"`);
-                        // Check if cached tasks already have first_activity_at
-                        // If not, we need to fetch it
-                        const tasksNeedingActivity = projectTasks.filter((t: Task) => 
-                            t.first_activity_at === undefined
-                        );
-                        needsActivityFetch = tasksNeedingActivity.length > 0;
-                        if (needsActivityFetch) {
-                            console.log(`⚠️ App.tsx: ${tasksNeedingActivity.length} tasks need activity dates in "${project.name}"`);
-                        } else {
-                            console.log(`✅ App.tsx: All tasks in "${project.name}" already have activity dates`);
-                        }
-                    }
-                    
-                    // Fetch first activity dates for tasks that don't have them
-                    if (needsActivityFetch && projectTasks && projectTasks.length > 0) {
-                        console.log(`🔄 App.tsx: Fetching activity dates for ${projectTasks.length} tasks in project "${project.name}"...`);
-                        
-                        // Fetch activity dates for each task
-                        let fetchedCount = 0;
-                        let foundCount = 0;
-                        const tasksWithActivity = await Promise.all(
-                            (projectTasks as Task[]).map(async (task: Task) => {
-                                // Skip if already has activity date
-                                if (task.first_activity_at !== undefined) {
-                                    return task;
-                                }
-                                
-                                fetchedCount++;
-                                // Pass task.created_at to filter out creation-adjacent activities
-                                const activityDate = await fetchFirstMeaningfulActivity(task.gid, ASANA_API_BASE, token, task.created_at);
-                                if (activityDate) foundCount++;
-                                
-                                return {
-                                    ...task,
-                                    first_activity_at: activityDate
-                                };
-                            })
-                        );
-                        
-                        projectTasks = tasksWithActivity;
-                        console.log(`✅ App.tsx: Fetched activity for ${fetchedCount} tasks, found dates for ${foundCount} in "${project.name}"`);
-                        
-                        // Cache the updated tasks with activity dates
-                        await cacheProjectTasks(project.gid, projectTasks as Task[]);
-                        console.log(`💾 App.tsx: Cached ${(projectTasks as Task[]).length} tasks with activity dates for "${project.name}"`);
-                    }
-                    
-                    allTasksResults.push({
-                        project,
-                        tasks: projectTasks
-                    });
+                    const tasks = await getCachedProjectTasks(project.gid);
+                    allTasksResults.push({ project, tasks: tasks || [] });
                 } catch (err) {
-                    console.error(`Error fetching tasks for project ${project.name}:`, err);
-                    // Add empty result to maintain array index alignment
+                    console.warn(`Failed to load cached tasks for project ${project.name}:`, err);
                     allTasksResults.push({ project, tasks: [] });
                 }
             }
@@ -798,106 +445,93 @@ export default function App() {
                     }
                 }
                 
-                // Look for "Launch" or "Completed" task that is marked as completed
-                const launchTask = tasks.find((t: Task) => {
-                    return t.completed && 
-                           t.completed_at && 
-                           t.name && 
-                           (
-                               t.name.toLowerCase().includes('launch') || 
-                               t.name.toLowerCase().includes('completed') ||
-                               t.name.toLowerCase().includes('go live')
-                           );
-                });
-                
-                // Get the earliest creation date of any task in the project
+                // Find the launch task: a completed task whose name clearly marks
+                // it as a project endpoint. "completed" alone is too broad (matches
+                // "Completed Onboarding Form" etc.), so we only accept it as a
+                // standalone word or as part of "project/site completed". Among
+                // multiple matches we pick the LATEST completed_at, not the first
+                // by array order.
+                const isLaunchName = (name: string) => {
+                    const n = name.toLowerCase();
+                    if (n.includes('launch')) return true;
+                    if (n.includes('go live') || n.includes('go-live') || n.includes('golive')) return true;
+                    if (n.includes('project completed') || n.includes('site completed')) return true;
+                    // "completed" as a whole word, but not preceded by "form/qa/onboarding/etc."
+                    return /(^|\s)completed(\s|$)/.test(n) && !/\b(form|qa|onboarding|checklist|review)\s+completed\b/.test(n);
+                };
+                const launchTask = tasks
+                    .filter((t: Task) => t.completed && t.completed_at && t.name && isLaunchName(t.name))
+                    .reduce<Task | null>((best, t) => {
+                        if (!best) return t;
+                        const tTime = new Date(t.completed_at || '').getTime();
+                        const bestTime = new Date(best.completed_at || '').getTime();
+                        return tTime > bestTime ? t : best;
+                    }, null);
+
                 const creationDates = tasks
                     .filter((t: Task) => t.created_at && !isNaN(new Date(t.created_at).getTime()))
                     .map((t: Task) => new Date(t.created_at));
-                
-                if (creationDates.length > 0) {
-                    try {
-                        const startDate = new Date(Math.min(...creationDates.map(d => d.getTime())));
-                        
-                        // Extract type
-                        const type = getWebsiteType(project);
-                        
-                        // Include project if it has a completed launch task OR if it's in progress
-                        if (launchTask) {
-                            // Project is completed - has a launch task
-                            const endDate = new Date(launchTask.completed_at || '');
-                            
-                            // Ensure dates are valid and duration is positive
-                            if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
-                                const duration = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-                                
-                                if (duration > 0) { // Exclude projects completed in 0 days
-                                    const salePrice = getSalePrice(project);
-                                    const ecommerce = getEcommerce(project);
-                                    
-                                    // Calculate weekly revenue if salePrice is a valid number
-                                    let weeklyRevenue: number | undefined;
-                                    if (typeof salePrice === 'number' && salePrice > 0 && duration > 0) {
-                                        const durationInWeeks = duration / 7;
-                                        weeklyRevenue = salePrice / durationInWeeks;
-                                    }
-                                    
-                                    durations.push({
-                                        name: project.name,
-                                        gid: project.gid,
-                                        duration,
-                                        created: startDate.toISOString(),
-                                        completed: endDate.toISOString(),
-                                        type,
-                                        salePrice,
-                                        ecommerce,
-                                        weeklyRevenue
-                                    });
-                                }
-                            }
-                        } else {
-                            // Project is in progress - no completed launch task yet
-                            // Calculate duration as from start date to today
-                            if (!isNaN(startDate.getTime())) {
-                                const today = new Date();
-                                const duration = Math.round((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-                                const salePrice = getSalePrice(project);
-                                const ecommerce = getEcommerce(project);
-                                
-                                // Calculate weekly revenue if salePrice is a valid number
-                                let weeklyRevenue: number | undefined;
-                                if (typeof salePrice === 'number' && salePrice > 0 && duration > 0) {
-                                    const durationInWeeks = duration / 7;
-                                    weeklyRevenue = salePrice / durationInWeeks;
-                                }
-                                
-                                durations.push({
-                                    name: project.name,
-                                    gid: project.gid,
-                                    duration, // Duration from start to today
-                                    created: startDate.toISOString(),
-                                    completed: '', // No completion date yet
-                                    type,
-                                    salePrice,
-                                    ecommerce,
-                                    weeklyRevenue
-                                });
-                            }
-                        }
-                    } catch (error) {
-                        console.error(`Error calculating duration for project ${project.name}:`, error);
+
+                if (creationDates.length === 0) return;
+                try {
+                    const startDate = new Date(Math.min(...creationDates.map(d => d.getTime())));
+                    if (isNaN(startDate.getTime())) return;
+
+                    const type = getWebsiteType(project);
+                    const salePrice = getSalePrice(project);
+                    const ecommerce = getEcommerce(project);
+
+                    // weeklyRevenue is misleading for very short engagements
+                    // (dividing by a fraction of a week explodes the figure), so
+                    // only compute it once the project has run at least 14 days.
+                    const WEEKLY_REVENUE_MIN_DAYS = 14;
+                    const weeklyRevenueFor = (duration: number): number | undefined => {
+                        if (typeof salePrice !== 'number' || salePrice <= 0) return undefined;
+                        if (duration < WEEKLY_REVENUE_MIN_DAYS) return undefined;
+                        return salePrice / (duration / 7);
+                    };
+
+                    if (launchTask) {
+                        const endDate = new Date(launchTask.completed_at || '');
+                        if (isNaN(endDate.getTime())) return;
+                        const duration = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+                        if (duration <= 0) return;
+                        durations.push({
+                            name: project.name,
+                            gid: project.gid,
+                            duration,
+                            created: startDate.toISOString(),
+                            completed: endDate.toISOString(),
+                            type,
+                            salePrice,
+                            ecommerce,
+                            weeklyRevenue: weeklyRevenueFor(duration),
+                        });
+                    } else {
+                        const today = new Date();
+                        const duration = Math.round((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+                        durations.push({
+                            name: project.name,
+                            gid: project.gid,
+                            duration,
+                            created: startDate.toISOString(),
+                            completed: '',
+                            inProgress: true,
+                            type,
+                            salePrice,
+                            ecommerce,
+                            weeklyRevenue: weeklyRevenueFor(duration),
+                        });
                     }
+                } catch (error) {
+                    console.error(`Error calculating duration for project ${project.name}:`, error);
                 }
             });
             
-            // Step 6: Apply sorting logic
             const sorted = [...durations];
             sortProjectDurations(sorted, projectSort);
-            
-            // Cache the analyzed data
-            await cacheAnalyzedData(durations);
-            
-            // Store all project tasks for ComparisonTabs to use (includes first_activity_at)
+
+            // Hand tasks to ComparisonTabs so it doesn't have to re-load them.
             const tasksMap: Record<string, Task[]> = {};
             allTasksResults.forEach(result => {
                 if (result.project.gid && result.tasks && result.tasks.length > 0) {
@@ -905,15 +539,14 @@ export default function App() {
                 }
             });
             setAllProjectTasks(tasksMap);
-            console.log(`📊 App.tsx: Stored tasks for ${Object.keys(tasksMap).length} projects in state`);
-            
+
             setProjectDurations(sorted);
         } catch (e) {
             setAnalysisError((e instanceof Error && e.message) ? e.message : 'Analysis failed.');
             console.error('Analysis error:', e);
         }
         setAnalyzing(false);
-    }, [token, projectSort, ASANA_API_BASE]);
+    }, [projectSort, getWebsiteType, getSalePrice, getEcommerce]);
     
     // Helper function to sort project durations
     const sortProjectDurations = (durations: ProjectDuration[], sortMethod: string) => {
@@ -964,16 +597,23 @@ export default function App() {
                 break;
             case 'price-asc':
                 durations.sort((a, b) => {
-                    const priceA = typeof a.salePrice === 'number' ? a.salePrice : -1;
-                    const priceB = typeof b.salePrice === 'number' ? b.salePrice : -1;
-                    return priceA - priceB;
+                    const aHas = typeof a.salePrice === 'number';
+                    const bHas = typeof b.salePrice === 'number';
+                    // Unpriced (N/A) always sorts last in both directions.
+                    if (!aHas && !bHas) return 0;
+                    if (!aHas) return 1;
+                    if (!bHas) return -1;
+                    return (a.salePrice as number) - (b.salePrice as number);
                 });
                 break;
             case 'price-desc':
                 durations.sort((a, b) => {
-                    const priceA = typeof a.salePrice === 'number' ? a.salePrice : -1;
-                    const priceB = typeof b.salePrice === 'number' ? b.salePrice : -1;
-                    return priceB - priceA;
+                    const aHas = typeof a.salePrice === 'number';
+                    const bHas = typeof b.salePrice === 'number';
+                    if (!aHas && !bHas) return 0;
+                    if (!aHas) return 1;
+                    if (!bHas) return -1;
+                    return (b.salePrice as number) - (a.salePrice as number);
                 });
                 break;
             case 'ecommerce-asc':
@@ -1000,236 +640,114 @@ export default function App() {
         }
     };
 
-    // ASANA_API_BASE is already defined above
-
-    const handleFetchProjects = async (forceRefresh = false) => {
-        if (!token) {
-            setError('Please enter your Asana Personal Access Token.');
-            return;
-        }
+    // Load the project list from the server cache. The optional argument is
+    // kept for back-compat with the previous Asana-fetching signature; it is
+    // ignored. To pull fresh data from Asana, use handleServerRefresh().
+    const handleFetchProjects = async (_forceRefresh = false) => {
+        void _forceRefresh;
         setLoading(true);
         setError('');
         setProjects([]);
         setProjectData(null);
         try {
-            // Import the project filter utility and server cache utilities
             const { filterSkippedProjects } = await import('./utils/projectFilter');
-            const { 
-                isCacheValid, 
-                getCachedProjects, 
-                cacheProjects,
-                clearCache,
-                clearExpiredCache
-            } = await import('./utils/serverCache');
-            
-            // Clear expired cache first
-            await clearExpiredCache();
-            
-            // Check cache first if not forcing refresh
-            if (!forceRefresh && await isCacheValid() && (await getCachedProjects()).length > 0) {
-                console.log('Using cached projects');
-                const cachedProjects = await getCachedProjects();
-                const filteredProjects = filterSkippedProjects(cachedProjects);
-                
-                // Sort projects alphabetically by name
-                const sortedProjects = [...filteredProjects].sort((a, b) => 
-                    a.name.localeCompare(b.name)
-                );
-                
-                setProjects(sortedProjects);
-                if (sortedProjects.length > 0) {
-                    setSelectedProjectGid(sortedProjects[0]?.gid || '');
+            const { getCachedProjects, isCacheValid } = await import('./utils/serverCache');
+
+            const cachedProjects = await getCachedProjects();
+            if (cachedProjects.length === 0) {
+                if (await isCacheValid()) {
+                    setError('Server cache is empty. Click "Refresh from Asana" to populate it.');
                 } else {
-                    setError("No projects found in the cache.");
+                    setError('Server cache is empty or expired. Click "Refresh from Asana" to populate it.');
                 }
                 setLoading(false);
                 return;
             }
-            
-            // Force refresh requested or cache invalid, clear the cache
-            if (forceRefresh) {
-                await clearCache();
-            }
-            
-            // Fetch all workspaces first
-            const workspacesResponse = await fetch(`${ASANA_API_BASE}/workspaces?opt_fields=name,gid`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (!workspacesResponse.ok) throw new Error(`API Error: ${workspacesResponse.statusText}`);
-            const workspacesResult = await workspacesResponse.json();
-            
-            // Fetch projects from each workspace
-            const allProjects = [];
-            for (const workspace of workspacesResult.data) {
-                const projectsResponse = await fetch(`${ASANA_API_BASE}/projects?workspace=${workspace.gid}&opt_fields=name,gid,archived,custom_fields.name,custom_fields.display_value,custom_fields.text_value,custom_fields.number_value`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                
-                if (projectsResponse.ok) {
-                    const projectsResult = await projectsResponse.json();
-                    // Only include non-archived projects
-                    const activeProjects = projectsResult.data.filter((p: Task & { archived?: boolean }) => !p.archived);
-                    allProjects.push(...activeProjects);
-                } else {
-                    console.warn(`Could not fetch projects for workspace ${workspace.name}: ${projectsResponse.statusText}`);
-                }
-            }
-            
-            // Cache the fetched projects
-            await cacheProjects(allProjects);
-            
-            // Filter out projects in the skip list
-            const filteredProjects = filterSkippedProjects(allProjects);
-            console.log(`Found ${allProjects.length} total projects, showing ${filteredProjects.length} after filtering`);
-            
-            // Sort projects alphabetically by name
-            const sortedProjects = [...filteredProjects].sort((a, b) => 
-                a.name.localeCompare(b.name)
-            );
-            
+
+            const filteredProjects = filterSkippedProjects(cachedProjects);
+            const sortedProjects = [...filteredProjects].sort((a, b) => a.name.localeCompare(b.name));
             setProjects(sortedProjects);
             if (sortedProjects.length > 0) {
-                setSelectedProjectGid(sortedProjects[0].gid);
+                setSelectedProjectGid(sortedProjects[0]?.gid || '');
             } else {
-                setError("No projects found in your Asana workspace.");
+                setError('No projects matched the visible-projects filter.');
             }
         } catch (err) {
-            if (err instanceof Error) {
-                setError(err.message);
-            } else {
-                setError('Unknown error occurred');
-            }
+            setError(err instanceof Error ? err.message : 'Unknown error occurred');
         }
         setLoading(false);
+    };
+
+    // Ask the server to refresh its Asana cache. Fire-and-forget on the
+    // server side; we poll cache status to know when it's done, then reload.
+    const handleServerRefresh = async () => {
+        if (refreshing) return;
+        setRefreshing(true);
+        setRefreshMessage('Starting server-side refresh...');
+        setError('');
+        setAnalysisError('');
+        try {
+            const startResp = await fetch('/api/cache/refresh', { method: 'POST' });
+            if (startResp.status === 401) {
+                throw new Error('Server requires a refresh secret. Configure REFRESH_SECRET and pass it via header.');
+            }
+            if (!startResp.ok && startResp.status !== 202 && startResp.status !== 409) {
+                const body = await startResp.json().catch(() => ({}));
+                throw new Error(body.error || `Refresh request failed (${startResp.status})`);
+            }
+
+            const { getCacheStatus } = await import('./utils/serverCache');
+            let elapsed = 0;
+            const POLL_MS = 5000;
+            const MAX_MS = 20 * 60 * 1000;
+            while (elapsed < MAX_MS) {
+                await new Promise(r => setTimeout(r, POLL_MS));
+                elapsed += POLL_MS;
+                const status = await getCacheStatus() as { refreshInProgress?: boolean; refreshError?: string | null };
+                if (status && status.refreshInProgress === false) {
+                    if (status.refreshError) {
+                        throw new Error(`Refresh failed: ${status.refreshError}`);
+                    }
+                    setRefreshMessage(`Refresh complete - ${status.projectCount ?? 0} projects cached.`);
+                    await handleFetchProjects();
+                    await analyzeAllProjects();
+                    setTimeout(() => setRefreshMessage(''), 8000);
+                    return;
+                }
+                setRefreshMessage(`Refreshing from Asana... (${Math.round(elapsed / 1000)}s elapsed)`);
+            }
+            throw new Error('Server-side refresh timed out after 20 minutes.');
+        } catch (err) {
+            setRefreshMessage('');
+            setError(err instanceof Error ? err.message : 'Refresh failed');
+        } finally {
+            setRefreshing(false);
+        }
     };
     
     useEffect(() => {
         const fetchProjectTasks = async () => {
-            if (!selectedProjectGid || !token) return;
+            if (!selectedProjectGid) return;
             setLoading(true);
             setError('');
             setProjectData(null);
             try {
-                // Import cache utilities
-                const { 
-                    getCachedProjectTasks,
-                    cacheProjectTasks
-                } = await import('./utils/asanaCache');
-                
-                // Check if we have cached tasks for this project
-                const cachedTasks = getCachedProjectTasks(selectedProjectGid);
-                
-                if (cachedTasks && cachedTasks.length > 0) {
-                    console.log(`Using cached tasks for project ${selectedProjectGid}`);
-                    
-                    // Fetch assignment dates from stories for cached tasks
-                    const tasksWithAssignments = await Promise.all(
-                        cachedTasks.map(async (task) => {
-                            try {
-                                const storiesResponse = await fetch(`${ASANA_API_BASE}/tasks/${task.gid}/stories?opt_fields=created_at,resource_type,resource_subtype,text`, {
-                                    headers: { 'Authorization': `Bearer ${token}` }
-                                });
-                                if (storiesResponse.ok) {
-                                    const storiesData = await storiesResponse.json();
-                                    console.log(`Stories for task ${task.name}:`, storiesData.data.slice(0, 5));
-                                    
-                                    // Find the first assignment story
-                                    const assignmentStory = storiesData.data.find((story: any) => {
-                                        if (!story.text) return false;
-                                        const text = story.text.toLowerCase();
-                                        return (
-                                            text.includes('assigned to') ||
-                                            text.includes('assigned this task') ||
-                                            (story.resource_subtype === 'assigned')
-                                        );
-                                    });
-                                    
-                                    if (assignmentStory) {
-                                        console.log(`Found assignment date for ${task.name}: ${assignmentStory.created_at}`);
-                                        return { ...task, assigned_at: assignmentStory.created_at };
-                                    } else {
-                                        console.log(`No assignment story found for ${task.name}`);
-                                    }
-                                }
-                            } catch (err) {
-                                console.warn(`Could not fetch stories for task ${task.gid}:`, err);
-                            }
-                            return task;
-                        })
-                    );
-                    
-                    processDataForDashboard(tasksWithAssignments);
+                const { getCachedProjectTasks } = await import('./utils/serverCache');
+                const cachedTasks = await getCachedProjectTasks(selectedProjectGid);
+                if (!cachedTasks || cachedTasks.length === 0) {
+                    setError('No cached tasks for this project yet. Click "Refresh from Asana" to populate the cache.');
                     setLoading(false);
                     return;
                 }
-                
-                // No cached data, fetch from API
-                // 1. Fetch all task GIDs for the project
-                const taskListResponse = await fetch(`${ASANA_API_BASE}/projects/${selectedProjectGid}/tasks?opt_fields=gid`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (!taskListResponse.ok) throw new Error(`Failed to fetch tasks: ${taskListResponse.statusText}`);
-                const taskListResult = await taskListResponse.json();
-                
-                // 2. Fetch full details for each task concurrently
-                const taskDetailPromises = taskListResult.data.map(async (task: Task) => {
-                    const taskResponse = await fetch(`${ASANA_API_BASE}/tasks/${task.gid}?opt_fields=name,created_at,due_on,completed,completed_at,start_at,start_on`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    const taskData = await taskResponse.json();
-                    
-                    // Fetch task stories to find first assignment date
-                    try {
-                        const storiesResponse = await fetch(`${ASANA_API_BASE}/tasks/${task.gid}/stories?opt_fields=created_at,resource_type,resource_subtype,text`, {
-                            headers: { 'Authorization': `Bearer ${token}` }
-                        });
-                        if (storiesResponse.ok) {
-                            const storiesData = await storiesResponse.json();
-                            console.log(`Stories for task ${taskData.data.name}:`, storiesData.data.slice(0, 5));
-                            
-                            // Find the first assignment story - look for various patterns
-                            const assignmentStory = storiesData.data.find((story: any) => {
-                                if (!story.text) return false;
-                                const text = story.text.toLowerCase();
-                                return (
-                                    text.includes('assigned to') ||
-                                    text.includes('assigned this task') ||
-                                    (story.resource_subtype === 'assigned')
-                                );
-                            });
-                            
-                            if (assignmentStory) {
-                                taskData.data.assigned_at = assignmentStory.created_at;
-                                console.log(`Found assignment date for ${taskData.data.name}: ${assignmentStory.created_at}`);
-                            } else {
-                                console.log(`No assignment story found for ${taskData.data.name}`);
-                            }
-                        }
-                    } catch (err) {
-                        console.warn(`Could not fetch stories for task ${task.gid}:`, err);
-                    }
-                    
-                    return taskData;
-                });
-                const taskDetailResults = await Promise.all(taskDetailPromises);
-                const tasks = taskDetailResults.map((res: { data: Task }) => res.data);
-                
-                // 3. Cache the tasks
-                cacheProjectTasks(selectedProjectGid, tasks);
-                
-                // 4. Process data for charts and tables
-                processDataForDashboard(tasks);
+                // Server-side enrichment already populated assigned_at/first_activity_at
+                processDataForDashboard(cachedTasks);
             } catch (err) {
-                if (err instanceof Error) {
-                    setError(err.message);
-                } else {
-                    setError('Unknown error occurred');
-                }
+                setError(err instanceof Error ? err.message : 'Unknown error occurred');
             }
             setLoading(false);
         };
         fetchProjectTasks();
-    }, [selectedProjectGid, token, processDataForDashboard, ASANA_API_BASE]);
+    }, [selectedProjectGid, processDataForDashboard]);
 
     // Handler for clicking a project in the chart - scrolls to project selector and selects it
     const handleProjectClick = useCallback((projectName: string) => {
@@ -1263,7 +781,6 @@ export default function App() {
 }
 
 const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
-        console.log('Login Success:', credentialResponse);
         // Here you can decode the JWT token to get user info if needed
         const token = credentialResponse.credential;
         if (token) {
@@ -1331,19 +848,31 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
                 ) : (
                     <div className="space-y-6 md:space-y-8">
 
-                {/* Removed Asana token section. Only show fetch button and errors. */}
                 <AnimatedSection delay={100}>
                     <div className="card">
                         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                            <button
-                                onClick={() => handleFetchProjects(projects.length > 0)}
-                                disabled={loading}
-                                className="btn-primary w-full sm:w-auto flex-grow flex items-center justify-center"
-                            >
-                                {loading && !projects.length ? 'Fetching...' : projects.length ? 'Refresh Projects' : 'Fetch Projects'}
-                            </button>
+                            <div className="flex flex-col sm:flex-row gap-2 flex-grow w-full sm:w-auto">
+                                <button
+                                    onClick={() => handleFetchProjects()}
+                                    disabled={loading || refreshing}
+                                    className="btn-primary w-full sm:w-auto flex-grow flex items-center justify-center"
+                                >
+                                    {loading && !projects.length ? 'Loading...' : projects.length ? 'Reload from Cache' : 'Load Projects'}
+                                </button>
+                                <button
+                                    onClick={handleServerRefresh}
+                                    disabled={refreshing || loading}
+                                    title="Have the server pull fresh data from Asana now"
+                                    className="w-full sm:w-auto px-4 py-2 rounded-md font-medium bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors flex items-center justify-center"
+                                >
+                                    {refreshing ? 'Refreshing...' : 'Refresh from Asana'}
+                                </button>
+                            </div>
                             <CacheStatusIndicator />
                         </div>
+                        {refreshMessage && (
+                            <div className="text-center mt-3 text-emerald-300 animate-pulse">{refreshMessage}</div>
+                        )}
                         {error && <ErrorDisplay message={error} />}
                         {loading && !analyzing && <div className="text-center mt-3 text-indigo-300 animate-pulse">Loading projects...</div>}
                         {!loading && analyzing && projects.length > 0 && !projectDurations.length && <div className="text-center mt-3 text-indigo-300 animate-pulse">Auto-analyzing projects...</div>}
@@ -1547,8 +1076,6 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
                                   highlightedProjects={highlightedProjects}
                                   sortMethod={projectSort}
                                   onProjectClick={handleProjectClick}
-                                  token={token}
-                                  apiBase={ASANA_API_BASE}
                                   preloadedTasks={allProjectTasks}
                                 />
                                 
@@ -1557,8 +1084,13 @@ const handleLoginSuccess = (credentialResponse: GoogleCredentialResponse) => {
                                     <h3 className="text-xl font-bold mb-6 text-center">Overall Project Statistics</h3>
                                     
                                     {(() => {
-                                        // Calculate comprehensive statistics for all projects
-                                        const allDurations = filteredDurations.map(p => p.duration);
+                                        // Stats only consider COMPLETED projects. In-progress
+                                        // projects have "days since start" durations that grow
+                                        // unbounded and would otherwise inflate mean / range /
+                                        // standard deviation in misleading ways.
+                                        const allDurations = filteredDurations
+                                            .filter(p => !p.inProgress)
+                                            .map(p => p.duration);
                                         const stats = calculateStatistics(allDurations);
                                         const statsInWeeks = {
                                             mean: daysToWeeks(stats.mean),

@@ -43,16 +43,6 @@ const TaskTable: FC<TaskTableProps> = ({ tasks }) => {
   const getStartTime = (task: Task): string => {
     // Priority: assigned_at (from stories) > start_at > start_on > created_at
     const startDate = task.assigned_at || task.start_at || task.start_on || task.created_at;
-    
-    // Debug logging
-    if (task.assigned_at) {
-      console.log(`Task "${task.name}" using assigned_at: ${task.assigned_at}`);
-    } else if (task.start_at) {
-      console.log(`Task "${task.name}" using start_at: ${task.start_at}`);
-    } else {
-      console.log(`Task "${task.name}" using created_at (fallback): ${task.created_at}`);
-    }
-    
     return formatDate(startDate);
   };
 

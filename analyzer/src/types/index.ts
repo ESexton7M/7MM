@@ -59,6 +59,8 @@ export interface ProjectDuration {
   duration: number;
   created: string;
   completed: string;
+  /** True when no launch task was found; duration is "days since start". */
+  inProgress?: boolean;
   highlighted?: boolean;
   type?: string;
   salePrice?: number | string;

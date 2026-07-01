@@ -51,7 +51,9 @@ export default tseslint.config([
       },
     },
     rules: {
-      'no-unused-vars': 'warn',
+      // Underscore-prefixed args / vars are considered intentionally unused.
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',

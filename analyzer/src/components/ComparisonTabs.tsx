@@ -111,7 +111,6 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
     const CREATION_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 
     try {
-      console.log(`Fetching stories for task "${taskName}" (GID: ${taskGid})...`);
       const storiesResponse = await fetch(
         `${apiBase}/tasks/${taskGid}/stories?opt_fields=created_at,resource_type,resource_subtype,text,source,type`,
         {
@@ -125,7 +124,6 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
       }
 
       const storiesData = await storiesResponse.json();
-      console.log(`Retrieved ${storiesData.data.length} stories for task "${taskName}"`);
       
       const taskCreationTime = taskCreatedAt ? new Date(taskCreatedAt).getTime() : 0;
       
@@ -173,19 +171,16 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
         
         // PRIORITY 1: Comments - ALWAYS meaningful, even within creation window
         if (subtype === 'comment_added' || story.type === 'comment') {
-          console.log(`✓ Found COMMENT activity for "${taskName}": ${story.created_at}`);
           return new Date(story.created_at);
         }
         
         // PRIORITY 2: Marked complete/incomplete - ALWAYS meaningful
         if (subtype === 'marked_complete' || subtype === 'marked_incomplete') {
-          console.log(`✓ Found COMPLETION status for "${taskName}": ${story.created_at}`);
           return new Date(story.created_at);
         }
         
         // PRIORITY 3: Assignments - always meaningful (someone took ownership)
         if (subtype === 'assigned' || text.includes('assigned to') || text.includes('assigned this task')) {
-          console.log(`✓ Found ASSIGNMENT activity for "${taskName}": ${story.created_at}`);
           return new Date(story.created_at);
         }
         
@@ -197,7 +192,6 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
               text.includes('working') ||
               text.includes('started') ||
               text.includes('active')) {
-            console.log(`✓ Found IN PROGRESS status for "${taskName}": ${story.created_at}`);
             return new Date(story.created_at);
           }
           // Skip if it's "not started" or similar inactive states
@@ -212,17 +206,14 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           }
           // Skip ANY section move within creation window (initial placement)
           if (isWithinCreationWindow) {
-            console.log(`⏭️ Skipping initial section move for "${taskName}" (within creation window)`);
             continue;
           }
           // Accept section moves after creation window
-          console.log(`✓ Found SECTION MOVE for "${taskName}": ${story.created_at}`);
           return new Date(story.created_at);
         }
         
         // PRIORITY 6: Attachments (someone added work product)
         if (subtype === 'attachment_added' || text.includes('attached')) {
-          console.log(`✓ Found ATTACHMENT activity for "${taskName}": ${story.created_at}`);
           return new Date(story.created_at);
         }
         
@@ -305,7 +296,6 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
     const loadSectionData = async () => {
       try {
         // Just a dummy function to set up the initial state
-        console.log("Using predefined sections:", REQUIRED_SECTIONS);
         
         // Make sure we have a valid selected section
         if (!selectedSection || !REQUIRED_SECTIONS.includes(selectedSection)) {
@@ -441,22 +431,18 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
 
   // Generate section durations when a section is selected
   useEffect(() => {
-    console.log(`🔥 ComparisonTabs useEffect triggered - activeTab: ${activeTab}, selectedSection: ${selectedSection}`);
     
     // Skip if not in section comparison mode
     if (activeTab !== 'sections' && !activeTab.startsWith('section-')) {
-      console.log('Skipping section data fetch - not in section comparison mode');
       return;
     }
     
-    console.log('Starting fetchSectionData...');
     
     const fetchSectionData = async () => {
       setSectionDataLoading(true);
       try {
         // First, check if we have preloaded tasks from App.tsx (fastest - already in memory)
         const hasPreloadedTasks = Object.keys(preloadedTasks).length > 0;
-        console.log(`📊 ComparisonTabs: ${hasPreloadedTasks ? 'Using PRELOADED tasks from App.tsx' : 'No preloaded tasks, will use server cache'}`);
         
         // Use SERVER cache as fallback
         const { getCachedProjects, getCachedProjectTasks } = await import('../utils/serverCache');
@@ -465,8 +451,6 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
         // Filter to only completed projects for section comparison
         const completedProjects = filterWebsiteProjectsOnly(projectDurations);
         
-        console.log(`Found ${cachedProjects.length} cached projects`);
-        console.log(`Processing ${completedProjects.length} completed projectDurations`);
         
         const sectionData: Record<string, { 
           projectName: string; 
@@ -477,7 +461,6 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
         
         // Process each project to get section-specific durations
         for (const project of completedProjects) {
-          console.log(`\n=== Processing project: "${project.name}" for section "${selectedSection}" ===`);
           
           // Find project GID
           let projectGid = project.gid;
@@ -491,24 +474,13 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           let tasks: Task[] | null = null;
           if (hasPreloadedTasks && projectGid && preloadedTasks[projectGid]) {
             tasks = preloadedTasks[projectGid] || null;
-            if (tasks) {
-              console.log(`⚡ Using ${tasks.length} preloaded tasks for "${project.name}"`);
-            }
           } else {
-            // Fallback to server cache
             tasks = await getCachedProjectTasks(projectGid);
-            if (tasks) {
-              console.log(`📦 Using ${tasks.length} cached tasks for "${project.name}"`);
-            }
           }
-          
+
           if (!tasks || tasks.length === 0) continue;
-          
-          // Log first task to verify first_activity_at is present
-          if (tasks.length > 0 && tasks[0]) {
-            console.log(`📋 First task in "${project.name}": first_activity_at=${tasks[0].first_activity_at}, assigned_at=${tasks[0].assigned_at}`);
-          }
-          
+
+
           // Filter for completed tasks in the selected section
           let sectionTasks: Task[] = [];
           
@@ -539,7 +511,6 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           
           // If we don't have any main tasks, fall back to using all tasks
           const tasksToUse = mainTasks.length > 0 ? mainTasks : sectionTasks;
-          console.log(`Project "${project.name}": Found ${mainTasks.length} main tasks out of ${sectionTasks.length} total tasks in "${selectedSection}"`);
           
           // Get the tasks sorted by creation and completion dates
           const sortedByCreation = [...tasksToUse].sort((a, b) => 
@@ -571,7 +542,6 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           
           // Fetch assignment date from the first task's history
           let assignedDate: Date | undefined = undefined;
-          console.log(`DEBUG: Checking first task for "${project.name}" - GID exists: ${!!firstTask.gid}, token exists: ${!!token}, apiBase exists: ${!!apiBase}`);
           
           // First, check if any task already has a first_activity_at or assigned_at field from cache
           // Find the earliest activity date across all tasks by sorting chronologically
@@ -588,13 +558,10 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
             const firstTaskWithActivity = tasksWithActivityDate[0];
             const activityDate = firstTaskWithActivity.first_activity_at || firstTaskWithActivity.assigned_at!;
             assignedDate = new Date(activityDate);
-            console.log(`✓ Using earliest cached activity date from task "${firstTaskWithActivity.name}": ${assignedDate.toISOString()}`);
           }
           
           // If no cached assigned_at found, fetch from task stories
           if (!assignedDate && firstTask.gid && token && apiBase) {
-            console.log(`Fetching assignment date for "${project.name}" - Section "${selectedSection}"`);
-            console.log(`First task: "${firstTask.name}" (GID: ${firstTask.gid})`);
             
             // Try to get assignment date from first task
             // Pass created_at to filter out creation-adjacent activities
@@ -602,14 +569,11 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
             
             // If not found, try subsequent tasks until we find one
             if (!tempAssignedDate && sortedByCreation.length > 1) {
-              console.log(`No assignment date for first task, trying up to ${Math.min(5, sortedByCreation.length)} more tasks...`);
               for (let i = 1; i < Math.min(5, sortedByCreation.length); i++) {
                 const nextTask = sortedByCreation[i];
                 if (nextTask && nextTask.gid) {
-                  console.log(`Trying task ${i + 1}: "${nextTask.name}"`);
                   tempAssignedDate = await fetchFirstMeaningfulActivityDate(nextTask.gid, nextTask.name || 'unknown', nextTask.created_at);
                   if (tempAssignedDate) {
-                    console.log(`✓ Found assignment date from task ${i + 1}: ${tempAssignedDate.toISOString()}`);
                     break;
                   }
                 }
@@ -618,7 +582,6 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
             
             if (tempAssignedDate) {
               assignedDate = tempAssignedDate;
-              console.log(`✓ Using assignment date: ${assignedDate.toISOString()} for "${project.name}" - "${selectedSection}"`);
             } else {
               console.warn(`✗ No assignment date found for "${project.name}" - "${selectedSection}" after checking ${Math.min(5, sortedByCreation.length)} tasks`);
             }
@@ -626,7 +589,6 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           
           // If no assignment date found in any task, implement fallback logic
           if (!assignedDate) {
-            console.log(`Implementing fallback logic for "${project.name}" - "${selectedSection}"...`);
             
             // Find the index of the current section
             const currentSectionIndex = REQUIRED_SECTIONS.indexOf(selectedSection);
@@ -634,7 +596,6 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
             // If this is not the first section, check when the previous section was completed
             if (currentSectionIndex > 0) {
               const previousSection = REQUIRED_SECTIONS[currentSectionIndex - 1];
-              console.log(`Checking previous section: "${previousSection}"`);
               
               // Get tasks from the previous section
               const previousSectionTasks: Task[] = [];
@@ -656,23 +617,19 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
                 const lastPreviousTask = sortedPreviousTasks[0];
                 if (lastPreviousTask && lastPreviousTask.completed_at) {
                   assignedDate = new Date(lastPreviousTask.completed_at);
-                  console.log(`✓ Using previous section completion date as fallback: ${assignedDate.toISOString()}`);
                 }
               }
             }
             
             // Special case for Onboarding Phase: use project creation date if no other date is found
             if (!assignedDate && selectedSection === ONBOARDING_SECTION) {
-              console.log(`Onboarding Phase with no assignment date - checking project creation date`);
               if (project.created) {
                 assignedDate = new Date(project.created);
-                console.log(`✓ Using project creation date for Onboarding Phase: ${assignedDate.toISOString()}`);
               }
             }
           }
           
           // Debug logging for section data
-          console.log(`Section "${selectedSection}" in "${project.name}": First task "${firstTask.name}" created ${firstTaskDate.toISOString().slice(0, 10)}, Last task completed ${lastTaskDate.toISOString().slice(0, 10)}${assignedDate ? `, Assigned ${assignedDate.toISOString().slice(0, 10)}` : ''}`);
           
           // Calculate duration based on available dates
           // Business logic:
@@ -690,18 +647,14 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
           if (assignedDate && lastTaskDate) {
             // Use assignment date to completion date
             durationDays = calculateDuration(assignedDate, lastTaskDate);
-            console.log(`Using assignment date to completion date for duration calculation`);
           } else if (selectedSection === ONBOARDING_SECTION && firstTaskDate && lastTaskDate) {
             // Special case: Onboarding Phase with no assignment date uses creation to completion date
             durationDays = calculateDuration(firstTaskDate, lastTaskDate);
-            console.log(`Using created_at to completed_at for Onboarding Phase (no assignment date found)`);
           } else {
             // For non-Onboarding sections with no assignment date, duration is 0
-            console.log(`No assignment date found for non-Onboarding section - setting duration to 0 days`);
             durationDays = 0;
           }
           
-          console.log(`Section "${selectedSection}" in "${project.name}": Duration = ${durationDays} days (${daysToWeeks(durationDays)} weeks)`);
           
           // Store real section data
           sectionData[project.name] = {
@@ -748,8 +701,8 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
             try {
               const cached = await getCachedProjectTasks(project.gid);
               projectTasks = cached || [];
-            } catch (e) {
-              console.log(`No cached tasks for ${project.name}`);
+            } catch {
+              console.warn(`No cached tasks for ${project.name}`);
             }
           }
           
@@ -820,7 +773,6 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
             
             for (const section of sectionDataList) {
               if (section.section !== 'Launch' && section.endDate && section.endDate > launchEndDate) {
-                console.log(`Capping ${section.section} end date from ${section.endDate.toLocaleDateString()} to Launch date ${launchEndDate.toLocaleDateString()} for ${project.name}`);
                 section.endDate = new Date(launchEndDate);
                 
                 // If start date is also after launch, cap it too (shouldn't happen, but be safe)
@@ -914,17 +866,7 @@ const ComparisonTabs: React.FC<ComparisonTabsProps> = ({
     
     const data = payload[0].payload;
     
-    // Debug logging
-    console.log('Tooltip data:', {
-      name: data.name,
-      section: data.section,
-      assignedDate: data.assignedDate,
-      completed: data.completed,
-      duration: data.duration,
-      originalDuration: data.originalDuration
-    });
-    
-    const assignedDateStr = data.assignedDate 
+    const assignedDateStr = data.assignedDate
       ? new Date(data.assignedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
       : null;
     const completedDateStr = data.completed

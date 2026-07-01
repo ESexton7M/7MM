@@ -36,9 +36,7 @@ const REQUIRED_SECTIONS = [
 
 // Add debugging to log color mapping issues
 const debugGetSectionCategoryColor = (category: string, isInProgress?: boolean): string => {
-    console.log(`DEBUG: Getting color for category: "${category}", isInProgress: ${isInProgress}`);
     const color = getSectionCategoryColor(category, isInProgress);
-    console.log(`DEBUG: Color returned: ${color}`);
     if (color === '#6b7280') {
         console.warn(`DEBUG: Default gray color applied for category: "${category}"`);
     }
@@ -135,19 +133,16 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
         
         // PRIORITY 1: Comments - ALWAYS meaningful, even within creation window
         if (subtype === 'comment_added' || story.type === 'comment') {
-          console.log(`Task ${taskGid}: Found comment activity at ${story.created_at}`);
           return story.created_at;
         }
         
         // PRIORITY 2: Marked complete/incomplete - ALWAYS meaningful
         if (subtype === 'marked_complete' || subtype === 'marked_incomplete') {
-          console.log(`Task ${taskGid}: Found completion status at ${story.created_at}`);
           return story.created_at;
         }
         
         // PRIORITY 3: Assignments - always meaningful (someone took ownership)
         if (subtype === 'assigned' || text.includes('assigned to') || text.includes('assigned this task')) {
-          console.log(`Task ${taskGid}: Found assignment activity at ${story.created_at}`);
           return story.created_at;
         }
         
@@ -158,7 +153,6 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
               text.includes('working') ||
               text.includes('started') ||
               text.includes('active')) {
-            console.log(`Task ${taskGid}: Found in-progress status at ${story.created_at}`);
             return story.created_at;
           }
           continue;
@@ -173,13 +167,11 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
           // Skip ANY section move within creation window (initial placement)
           if (isWithinCreationWindow) continue;
           
-          console.log(`Task ${taskGid}: Found section move activity at ${story.created_at}`);
           return story.created_at;
         }
         
         // PRIORITY 6: Attachments (someone added work product)
         if (subtype === 'attachment_added' || text.includes('attached')) {
-          console.log(`Task ${taskGid}: Found attachment activity at ${story.created_at}`);
           return story.created_at;
         }
         
@@ -202,8 +194,6 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
   const fetchSectionData = useCallback(async () => {
     if (!projects.length) return;
     
-    console.log('fetchSectionData: Starting with', projects.length, 'projects');
-    console.log('Required sections:', REQUIRED_SECTIONS.join(', '));
     
     setLoading(true);
     setError('');
@@ -212,7 +202,6 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
       // Use SERVER cache which has first_activity_at data (fetched during analyzeAllProjects)
       const { getCachedProjects, getCachedProjectTasks } = await import('../utils/serverCache');
       const cachedProjects = await getCachedProjects();
-      console.log('📦 SectionComparisonView: Using SERVER cache - Found', cachedProjects.length, 'cached projects');
       
       // Store section data for each project
       const allProjectData: ProjectSectionData[] = [];
@@ -236,13 +225,6 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
           continue;
         }
         
-        // Log first task to verify first_activity_at is present
-        if (tasks.length > 0 && tasks[0]) {
-          console.log(`📋 SectionComparisonView: First task in "${project.name}": first_activity_at=${tasks[0].first_activity_at}`);
-        }
-        
-        console.log(`Processing ${tasks.length} tasks for project "${project.name}" (${projectGid})`);
-        
         // Group tasks by section
         const sectionTasks: Record<string, Task[]> = {};
         
@@ -257,7 +239,7 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
           if (!task.completed || !task.completed_at || !task.created_at) return;
           
           // Determine section name from task
-          let sectionName = extractSectionFromTask(task);
+          const sectionName = extractSectionFromTask(task);
           
           // Map section names to our required sections if needed
           const mappedSection = mapToRequiredSection(sectionName);
@@ -269,14 +251,6 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
             }
           }
         });
-        
-        // Filter to only keep sections that have tasks
-        const sectionsWithTasks = REQUIRED_SECTIONS.filter(section => 
-          sectionTasks[section] && sectionTasks[section].length > 0
-        );
-        
-        console.log(`Found ${sectionsWithTasks.length} required sections in project "${project.name}"`);
-        console.log('Sections with tasks:', sectionsWithTasks.join(', '));
         
         // Calculate section statistics
         const sectionStats: Record<string, {
@@ -291,7 +265,6 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
         for (const [section, tasks] of Object.entries(sectionTasks)) {
           if (tasks.length === 0) continue;
           
-          console.log(`Calculating stats for section "${section}" in project "${project.name}" - ${tasks.length} tasks`);
           
           // Identify main tasks (not subtasks) based on naming patterns
           // Subtasks often have patterns like "- Subtask name", "* Subtask", "  Subtask", etc.
@@ -312,7 +285,6 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
           // If we don't have any main tasks, fall back to using all tasks
           const tasksToUse = mainTasks.length > 0 ? mainTasks : tasks;
           
-          console.log(`Found ${mainTasks.length} main tasks out of ${tasks.length} total tasks in "${section}"`);
           
           // OPTIMIZED: First, sort tasks by creation date to find the earliest ones first
           // Then check for activity dates - once we find one, we can stop for this section
@@ -323,41 +295,31 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
           // Collect activity dates - prioritize cached first_activity_at, then fetch if needed
           // OPTIMIZATION: Stop once we find a valid activity date (we only need the earliest)
           let earliestActivityDate: Date | null = null;
-          let earliestActivityTask: Task | null = null;
-          let activitySource = 'created';
-          
-          console.log(`Looking for first activity date in section "${section}"...`);
-          
+
           for (const task of sortedByCreation) {
             // First check if task has cached first_activity_at
             if (task.first_activity_at) {
               const activityDate = new Date(task.first_activity_at);
               if (!earliestActivityDate || activityDate < earliestActivityDate) {
                 earliestActivityDate = activityDate;
-                earliestActivityTask = task;
-                activitySource = 'cached_activity';
               }
-              // If we found an activity date and it's from the earliest created task, 
+              // If we found an activity date and it's from the earliest created task,
               // we can stop - no earlier task exists
               if (task === sortedByCreation[0]) {
-                console.log(`Found cached activity date for earliest task "${task.name}" - stopping search`);
                 break;
               }
             } else {
               // No cached activity, try to fetch it
               // Pass created_at to filter out creation-adjacent activities
               const activityDateStr = await fetchFirstMeaningfulActivity(task.gid, task.created_at);
-              
+
               if (activityDateStr) {
                 const activityDate = new Date(activityDateStr);
                 if (!earliestActivityDate || activityDate < earliestActivityDate) {
                   earliestActivityDate = activityDate;
-                  earliestActivityTask = task;
-                  activitySource = 'fetched_activity';
                 }
                 // If this is the earliest created task and has activity, we're done
                 if (task === sortedByCreation[0]) {
-                  console.log(`Found fetched activity date for earliest task "${task.name}" - stopping search`);
                   break;
                 }
               }
@@ -368,7 +330,6 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
             if (earliestActivityDate && task.created_at) {
               const taskCreatedDate = new Date(task.created_at);
               if (taskCreatedDate > earliestActivityDate) {
-                console.log(`Remaining tasks created after earliest activity date - stopping search`);
                 break;
               }
             }
@@ -379,13 +340,9 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
             const firstTask = sortedByCreation[0];
             if (firstTask?.created_at) {
               earliestActivityDate = new Date(firstTask.created_at);
-              earliestActivityTask = firstTask;
-              activitySource = 'created';
-              console.log(`No activity found, using creation date of "${firstTask.name}"`);
             }
           }
           
-          console.log(`Section "${section}" first activity: "${earliestActivityTask?.name}" on ${earliestActivityDate?.toISOString().slice(0, 10)} (${activitySource})`);
           
           // Get completion dates for sorting
           const sortedByCompletion = [...tasksToUse]
@@ -430,7 +387,6 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
                 // If our actualLastTaskDate is on or after the launch date,
                 // we need to find the last task that was completed BEFORE the launch date
                 if (actualLastTaskDate >= launchDate) {
-                  console.log(`WARNING: Last task for ${section} was completed on/after launch date. Finding earlier task...`);
                   
                   // Find tasks completed before launch
                   const tasksBeforeLaunch = sortedByCompletion.filter(t => 
@@ -441,7 +397,6 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
                     const lastTaskBeforeLaunch = tasksBeforeLaunch[tasksBeforeLaunch.length - 1];
                     if (lastTaskBeforeLaunch && lastTaskBeforeLaunch.completed_at) {
                       actualLastTaskDate = new Date(lastTaskBeforeLaunch.completed_at);
-                      console.log(`Adjusted last task for ${section} to: "${lastTaskBeforeLaunch.name || 'unnamed task'}" on ${actualLastTaskDate.toISOString()}`);
                     }
                   }
                 }
@@ -450,8 +405,6 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
           }
           
           // Print task details for debugging
-          console.log(`First activity in ${section}: "${earliestActivityTask?.name || 'N/A'}" on ${firstTaskDate.toISOString()} (source: ${activitySource})`);
-          console.log(`Last task in ${section}: "${lastTask?.name || 'N/A'}" completed on ${actualLastTaskDate.toISOString()}`);
 
           // Check if this section is still in progress (has incomplete tasks)
           const hasIncompleteTasks = tasksToUse.some(task => !task.completed);
@@ -470,15 +423,7 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
           const projectSections = forceInProgressProjects[project.name];
           if (projectSections && Array.isArray(projectSections) && 
               projectSections.includes(section)) {
-            console.log(`Project "${project.name}" - Section "${section}" is forced to in-progress state by configuration`);
             forceInProgress = true;
-          }
-          
-          // Special debug info for Cause Teen Center
-          if (project.name.includes('Cause Teen Center')) {
-            console.log(`DEBUG - Cause Teen Center - Current section: ${section}`);
-            console.log(`DEBUG - Cause Teen Center - Tasks: ${tasks.length} total, ${tasks.filter(t => !t.completed).length} incomplete`);
-            console.log(`DEBUG - Cause Teen Center - Section tasks: ${tasksToUse.length} total, ${tasksToUse.filter(t => !t.completed).length} incomplete`);
           }
           
           // Check for in-progress sections across ALL projects
@@ -503,19 +448,13 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
             
             // Special handling for Cause Teen Center
             if (project.name.includes('Cause Teen Center')) {
-              console.log(`DEBUG - Cause Teen Center - Onboarding Phase - Found ${incompleteOnboardingTasks.length} incomplete onboarding tasks`);
               // Force in-progress for Cause Teen Center's onboarding phase
               if (section === 'Onboarding Phase') {
-                console.log(`DEBUG - Forcing Cause Teen Center Onboarding Phase to be in-progress`);
                 forceInProgress = true;
               }
             }
             
             if (incompleteOnboardingTasks.length > 0) {
-              console.log(`Project "${project.name}": Found ${incompleteOnboardingTasks.length} incomplete tasks for Onboarding Phase`);
-              incompleteOnboardingTasks.forEach(task => 
-                console.log(` - Incomplete onboarding task: "${task.name}" (${task.gid})`)
-              );
               forceInProgress = true;
             }
           } else if (section === 'Mockup Phase') {
@@ -536,7 +475,6 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
             });
             
             if (incompleteMockupTasks.length > 0) {
-              console.log(`Project "${project.name}": Found ${incompleteMockupTasks.length} incomplete tasks for Mockup Phase`);
               forceInProgress = true;
             }
           } else if (section === 'Development Phase') {
@@ -557,7 +495,6 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
             });
             
             if (incompleteDevelopmentTasks.length > 0) {
-              console.log(`Project "${project.name}": Found ${incompleteDevelopmentTasks.length} incomplete tasks for Development Phase`);
               forceInProgress = true;
             }
           }
@@ -569,21 +506,12 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
             const today = new Date(); // Today
             const durationMs = today.getTime() - firstTaskDate.getTime();
             durationDays = Math.max(0, Math.round(durationMs / (1000 * 60 * 60 * 24)));
-            console.log(`Section "${section}" is IN PROGRESS - duration so far:`, durationDays, 'days (', daysToWeeks(durationDays), 'weeks)');
           } else {
             // Normal calculation for completed sections
             const durationMs = actualLastTaskDate.getTime() - firstTaskDate.getTime();
             durationDays = Math.max(0, Math.round(durationMs / (1000 * 60 * 60 * 24)));
-            console.log(`Section "${section}" duration:`, durationDays, 'days (', daysToWeeks(durationDays), 'weeks)');
           }
           
-          console.log(`  First task date: ${firstTaskDate.toISOString()}`);
-          console.log(`  Last task date: ${actualLastTaskDate.toISOString()}`);
-          
-          // Debug logging
-          if (false) { // Disable verbose logging
-            console.log(`${project.name} - Section ${section} - Start: ${firstTaskDate.toISOString().slice(0, 10)}, End: ${actualLastTaskDate.toISOString().slice(0, 10)}`);
-          }
           
           // Store section data with first/last task dates
           sectionStats[section] = {
@@ -605,8 +533,6 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
       }
       
       // We are only using our predefined REQUIRED_SECTIONS
-      console.log(`Working with ${REQUIRED_SECTIONS.length} required sections`);
-      console.log('Required sections:', REQUIRED_SECTIONS.join(', '));
       
       // Filter project data to only include projects that have at least one of the required sections
       const filteredProjectData = allProjectData.filter(project => 
@@ -615,13 +541,11 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
         )
       );
       
-      console.log(`Found ${filteredProjectData.length} projects with at least one required section`);
       
       setProjectSectionData(filteredProjectData);
       
       // If the currently selected section isn't valid, select the first available one
       if (!selectedSection || !REQUIRED_SECTIONS.includes(selectedSection)) {
-        console.log('Setting initial selected section to:', REQUIRED_SECTIONS[0]);
         setSelectedSection(REQUIRED_SECTIONS[0] || '');
       }
       
@@ -713,7 +637,6 @@ const SectionComparisonView: React.FC<SectionComparisonProps> = ({
     }
     
     // No match found, return null to filter this section out
-    console.log(`No mapping found for section: "${sectionName}"`);
     return null;
   };
 

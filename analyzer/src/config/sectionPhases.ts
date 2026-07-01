@@ -214,7 +214,7 @@ export function standardizeSectionName(sectionName: string): string {
     const normalized = sectionName.trim().toLowerCase();
     
     // Check for exact matches first
-    for (const [category, _] of Object.entries(phaseNameMappings)) {
+    for (const category of Object.keys(phaseNameMappings)) {
         if (normalized === category.toLowerCase()) {
             return category;
         }
@@ -305,11 +305,9 @@ export function getSectionCategoryColor(category: string, isInProgress?: boolean
             'Other': '#9ca3af'               // Lighter Gray
         };
         const color = inProgressColorMap[normalizedCategory] || '#9ca3af';
-        console.log(`DEBUG getSectionCategoryColor (in-progress): "${normalizedCategory}" -> ${color}`);
         return color;
     }
     
     const color = colorMap[normalizedCategory] || '#6b7280';
-    console.log(`DEBUG getSectionCategoryColor: "${normalizedCategory}" -> ${color}`);
     return color;
 }

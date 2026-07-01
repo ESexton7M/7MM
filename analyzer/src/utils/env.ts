@@ -1,41 +1,24 @@
 /**
- * Environment variables handling utilities
+ * Client-side environment configuration shim.
+ *
+ * The Asana Personal Access Token used to live in the browser bundle via
+ * `VITE_ASANA_TOKEN`. That token is now held only on the server (see
+ * /.env.example). For backwards compatibility, components that still call
+ * `loadEnvConfig()` receive an empty token, which makes their direct-Asana
+ * fallback paths short-circuit harmlessly - the data they need is already
+ * pre-enriched in the server cache.
  */
 
-// Define the configuration interface
 export interface EnvConfig {
   ASANA_TOKEN: string;
   ASANA_API_BASE: string;
 }
 
-/**
- * Load and validate environment variables with fallbacks
- */
-export const loadEnvConfig = (): EnvConfig => {
-  const ASANA_TOKEN = import.meta.env.VITE_ASANA_TOKEN || '';
-  const ASANA_API_BASE = 'https://app.asana.com/api/1.0';
+export const loadEnvConfig = (): EnvConfig => ({
+  ASANA_TOKEN: '',
+  ASANA_API_BASE: 'https://app.asana.com/api/1.0',
+});
 
-  // Warn about missing token in development
-  if (!ASANA_TOKEN && import.meta.env.DEV) {
-    console.warn('⚠️ Missing VITE_ASANA_TOKEN environment variable. Please add it to your .env file.');
-  }
-
-  return {
-    ASANA_TOKEN,
-    ASANA_API_BASE
-  };
-};
-
-/**
- * Check if required environment variables are configured
- */
-export const checkEnvConfig = (config: EnvConfig): { valid: boolean; error?: string } => {
-  if (!config.ASANA_TOKEN) {
-    return {
-      valid: false,
-      error: 'Missing Asana Personal Access Token. Please add VITE_ASANA_TOKEN to your .env file.'
-    };
-  }
-
-  return { valid: true };
-};
+export const checkEnvConfig = (): { valid: boolean; error?: string } => ({
+  valid: true,
+});
