@@ -9,9 +9,20 @@
     font-family: 'Inter', 'Segoe UI', 'Arial', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 }
 
+/*
+ * NOTE ON TEXT SHARPNESS:
+ * The previous version of these rules used `backdrop-filter: blur(8px)`,
+ * `will-change: box-shadow, transform`, and `transform: ... scale(1.02)`
+ * on cards / buttons. That combo promotes each element to its own GPU
+ * compositor layer at a non-integer scale, which makes text inside look
+ * permanently slightly blurry (especially on Chrome / Windows). Kept the
+ * lift-on-hover effect via translateY + box-shadow only, which does not
+ * trigger the sub-pixel text rescaling.
+ */
 @layer components {
   .card {
     background: linear-gradient(135deg, #23272f 0%, #1a1c23 100%);
@@ -19,13 +30,11 @@
     box-shadow: 0 4px 32px 0 rgba(60, 60, 120, 0.25);
     border: 1px solid #2d2f36;
     padding: 1.5rem;
-    backdrop-filter: blur(8px);
     transition: box-shadow 0.3s, transform 0.3s;
-    will-change: box-shadow, transform;
   }
   .card:hover {
     box-shadow: 0 8px 48px 0 rgba(80, 80, 200, 0.35);
-    transform: translateY(-2px) scale(1.02);
+    transform: translateY(-2px);
   }
 
   .btn-primary {
@@ -47,7 +56,7 @@
   .btn-primary:hover {
     background: linear-gradient(90deg, #818cf8 0%, #a78bfa 100%);
     box-shadow: 0 4px 16px 0 rgba(99, 102, 241, 0.25);
-    transform: translateY(-1px) scale(1.03);
+    transform: translateY(-1px);
   }
   .btn-primary:disabled {
     background: #444;
@@ -82,11 +91,10 @@
     text-align: center;
     color: #fff;
     transition: box-shadow 0.3s, transform 0.3s;
-    will-change: box-shadow, transform;
   }
   .stat-card:hover {
     box-shadow: 0 6px 32px 0 rgba(80, 80, 200, 0.25);
-    transform: translateY(-2px) scale(1.03);
+    transform: translateY(-2px);
   }
 
   .chart-title {
@@ -95,7 +103,6 @@
     color: #c7d2fe;
     margin-bottom: 1rem;
     letter-spacing: 0.02em;
-    text-shadow: 0 2px 8px rgba(99, 102, 241, 0.08);
   }
 }
 

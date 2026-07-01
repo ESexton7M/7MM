@@ -78,9 +78,15 @@ export function AnimatedSection({
 
   const getTransformClasses = () => {
     const baseClasses = `transition-all duration-${duration} ease-out`;
-    
+
+    // At the resting (intersecting) state, do NOT apply identity transform
+    // classes. `translate-x-0 translate-y-0 scale-100` looks like a no-op
+    // but still emits `transform: translate(0,0) scale(1)`, which keeps the
+    // element on its own GPU compositor layer indefinitely and makes text
+    // inside look slightly blurry. The transition still interpolates back
+    // from the initial transform to no-transform.
     if (isIntersecting) {
-      return `${baseClasses} opacity-100 translate-x-0 translate-y-0 scale-100`;
+      return `${baseClasses} opacity-100`;
     }
 
     switch (direction) {
