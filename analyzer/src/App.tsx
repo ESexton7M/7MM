@@ -395,10 +395,25 @@ export default function App() {
                 isCacheValid,
                 getCachedProjects,
                 getCachedProjectTasks,
+                getCachedAnalyzedData,
             } = await import('./utils/serverCache');
 
             if (!(await isCacheValid())) {
                 setAnalysisError('Server cache is empty or expired. Click "Refresh from Asana" to populate it.');
+                setAnalyzing(false);
+                return;
+            }
+
+            // Fast path: if the server already computed the duration
+            // analysis during its last refresh, use it directly instead of
+            // re-iterating every project + its cached tasks (~10s for 300
+            // projects). Per-project tasks are still lazily loaded by
+            // ComparisonTabs when the user opens a comparison view.
+            const cachedAnalyzed = await getCachedAnalyzedData();
+            if (cachedAnalyzed && Array.isArray(cachedAnalyzed) && cachedAnalyzed.length > 0) {
+                const sorted = [...cachedAnalyzed] as ProjectDuration[];
+                sortProjectDurations(sorted, projectSort);
+                setProjectDurations(sorted);
                 setAnalyzing(false);
                 return;
             }

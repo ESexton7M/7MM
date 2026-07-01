@@ -24,10 +24,16 @@ const PORT = process.env.PORT || 8080;
 const ASANA_TOKEN = process.env.ASANA_TOKEN || '';
 const ASANA_API_BASE = process.env.ASANA_API_BASE || 'https://app.asana.com/api/1.0';
 const REFRESH_INTERVAL_DAYS = Math.max(1, parseInt(process.env.REFRESH_INTERVAL_DAYS || '2', 10));
+// REFRESH_INTERVAL_HOURS takes precedence over _DAYS if set. Common values:
+// 6, 12, 24. Values that don't evenly divide 24 fall back to the daily
+// cron with a rounded day interval.
+const REFRESH_INTERVAL_HOURS = process.env.REFRESH_INTERVAL_HOURS
+  ? Math.max(1, parseInt(process.env.REFRESH_INTERVAL_HOURS, 10))
+  : REFRESH_INTERVAL_DAYS * 24;
 const REFRESH_SECRET = process.env.REFRESH_SECRET || '';
 const ENRICH_CONCURRENCY = Math.max(1, parseInt(process.env.ENRICH_CONCURRENCY || '5', 10));
 
-const CACHE_EXPIRATION_MS = REFRESH_INTERVAL_DAYS * 24 * 60 * 60 * 1000;
+const CACHE_EXPIRATION_MS = REFRESH_INTERVAL_HOURS * 60 * 60 * 1000;
 
 const CACHE_DIR = path.join(__dirname, 'analyzer', 'server', 'cache');
 const PROJECTS_CACHE_FILE = path.join(CACHE_DIR, 'projects.json');
@@ -225,6 +231,192 @@ async function enrichTasksWithStories(client, tasks, concurrency) {
   return out;
 }
 
+// =================== duration analysis (pre-computed server-side) ===================
+//
+// The frontend used to iterate every project + its cached tasks to derive
+// the ProjectDuration array shown on the dashboard - that added ~10s to
+// every page load. The server now computes the same analysis at refresh
+// time and writes it to analyzed.json; the client just reads and displays.
+//
+// IMPORTANT: keep this in sync with analyzer/src/App.tsx analyzeAllProjects
+// (launch-task heuristic, custom-field extraction, weeklyRevenue rules) and
+// with analyzer/src/config/projectSkipList.ts.
+
+const PROJECT_SKIP_LIST = new Set([
+  'Video and Photo Projects',
+  'Altoona ~ Station Sites',
+  'Johnstown ~ Station Sites',
+  'State College ~ Station Sites',
+  'Ticket Requests',
+  'Client Updates',
+  'Olean ~ Station Sites',
+  'CapCity Kitchen',
+  'DuBois/Clarion Websites',
+  'Lewistown Station Websites',
+  'NWPA ~ Station Sites',
+  'Scrum Board',
+  'Lebanon Station Websites',
+  'Elmira Station Websites',
+  'Mansfield Station Websites',
+  'Frankfort Station Websites',
+  'Selinsgrove (+Williamsport',
+  'Bloomsburg) Station Websites',
+  'Stroudsburg (+ Scranton/Wilkes-Barre) Station Websites',
+  'API',
+  'Live. Love. Local',
+  'Radio Station TV Commercials',
+  'DuBois Job Fair',
+  'Radio Auction Website',
+  'My Baby Bigfoot',
+  'Burro E-Commerce Addition',
+  'Dev Code Snippets',
+  'Parkersburg Station Websites',
+  'RadioNOVO APP',
+  '7MM Streaming App',
+  '7MM 7MC Event Collateral',
+  'Davison Snacks T-Shirt Design',
+  'Elmira GSM Video',
+  'Siteground Website Transfers',
+  'Bowling Green Station Websites',
+  '7MM Susquehanna Employment Page',
+  'Ticket Board',
+  'Rockey Auctions (Redesign)',
+  '7MM Sports',
+  '92 Mix FM',
+  'Research & Development',
+  '7 Mountains Sports Replay Animation',
+  'Project overview',
+  'Mock project',
+  'Spooky PA landing page',
+  '7MM Web Project',
+]);
+
+function findCustomField(project, fieldName) {
+  if (!project.custom_fields || project.custom_fields.length === 0) return null;
+  const wanted = fieldName.toLowerCase();
+  return project.custom_fields.find((cf) => (cf.name || '').toLowerCase() === wanted) || null;
+}
+
+function getWebsiteType(project) {
+  const f = findCustomField(project, 'type');
+  if (!f) return 'N/A';
+  return f.display_value || f.text_value || 'N/A';
+}
+
+function getSalePrice(project) {
+  const f = findCustomField(project, 'sale price');
+  if (!f) return 'N/A';
+  if (f.number_value != null) return f.number_value;
+  if (f.display_value) {
+    const numeric = parseFloat(String(f.display_value).replace(/[,$]/g, ''));
+    if (!isNaN(numeric)) return numeric;
+    return f.display_value;
+  }
+  return f.text_value || 'N/A';
+}
+
+function getEcommerce(project) {
+  const f = findCustomField(project, 'e-commerce');
+  if (!f) return 'No';
+  return f.display_value || f.text_value || 'No';
+}
+
+function isLaunchName(name) {
+  const n = (name || '').toLowerCase();
+  if (n.includes('launch')) return true;
+  if (n.includes('go live') || n.includes('go-live') || n.includes('golive')) return true;
+  if (n.includes('project completed') || n.includes('site completed')) return true;
+  return (
+    /(^|\s)completed(\s|$)/.test(n) &&
+    !/\b(form|qa|onboarding|checklist|review)\s+completed\b/.test(n)
+  );
+}
+
+const WEEKLY_REVENUE_MIN_DAYS = 14;
+
+function computeProjectDurations(projects, tasksByGid) {
+  const durations = [];
+
+  for (const project of projects) {
+    if (PROJECT_SKIP_LIST.has(project.name)) continue;
+    const tasks = tasksByGid[project.gid];
+    if (!Array.isArray(tasks) || tasks.length === 0) continue;
+
+    // Skip projects whose first task lists it under "Video and Photo Projects".
+    const firstTaskProjects = tasks[0] && tasks[0].projects;
+    if (Array.isArray(firstTaskProjects)) {
+      const inVideoPhoto = firstTaskProjects.some(
+        (p) => p.name && p.name.toLowerCase() === 'video and photo projects'
+      );
+      if (inVideoPhoto) continue;
+    }
+
+    // Find launch task: tightened keyword match, pick LATEST completed_at.
+    let launchTask = null;
+    let launchTime = -Infinity;
+    for (const t of tasks) {
+      if (!t.completed || !t.completed_at || !t.name) continue;
+      if (!isLaunchName(t.name)) continue;
+      const time = new Date(t.completed_at).getTime();
+      if (!isNaN(time) && time > launchTime) {
+        launchTask = t;
+        launchTime = time;
+      }
+    }
+
+    const creationTimes = tasks
+      .filter((t) => t.created_at && !isNaN(new Date(t.created_at).getTime()))
+      .map((t) => new Date(t.created_at).getTime());
+    if (creationTimes.length === 0) continue;
+    const startTime = Math.min(...creationTimes);
+    const startDate = new Date(startTime);
+
+    const type = getWebsiteType(project);
+    const salePrice = getSalePrice(project);
+    const ecommerce = getEcommerce(project);
+
+    const weeklyRevenueFor = (durationDays) => {
+      if (typeof salePrice !== 'number' || salePrice <= 0) return undefined;
+      if (durationDays < WEEKLY_REVENUE_MIN_DAYS) return undefined;
+      return salePrice / (durationDays / 7);
+    };
+
+    if (launchTask) {
+      const endTime = new Date(launchTask.completed_at).getTime();
+      if (isNaN(endTime)) continue;
+      const duration = Math.round((endTime - startTime) / (1000 * 60 * 60 * 24));
+      if (duration <= 0) continue;
+      durations.push({
+        name: project.name,
+        gid: project.gid,
+        duration,
+        created: startDate.toISOString(),
+        completed: new Date(endTime).toISOString(),
+        type,
+        salePrice,
+        ecommerce,
+        weeklyRevenue: weeklyRevenueFor(duration),
+      });
+    } else {
+      const duration = Math.round((Date.now() - startTime) / (1000 * 60 * 60 * 24));
+      durations.push({
+        name: project.name,
+        gid: project.gid,
+        duration,
+        created: startDate.toISOString(),
+        completed: '',
+        inProgress: true,
+        type,
+        salePrice,
+        ecommerce,
+        weeklyRevenue: weeklyRevenueFor(duration),
+      });
+    }
+  }
+
+  return durations;
+}
+
 // =================== full refresh orchestration ===================
 
 let refreshInProgress = false;
@@ -269,12 +461,16 @@ async function runFullRefresh({ trigger }) {
 
     let succeeded = 0;
     let failed = 0;
+    // Keep enriched tasks in memory as we go, so we can compute the analyzed
+    // cache without re-reading every cache file after the loop.
+    const tasksByGid = {};
     for (const project of allProjects) {
       try {
         const tasks = await fetchTasksForProject(client, project.gid);
         const enriched = await enrichTasksWithStories(client, tasks, ENRICH_CONCURRENCY);
         const file = path.join(PROJECT_TASKS_CACHE_DIR, `${project.gid}.json`);
         await fs.writeFile(file, JSON.stringify(enriched, null, 2));
+        tasksByGid[project.gid] = enriched;
         succeeded++;
       } catch (err) {
         failed++;
@@ -282,10 +478,20 @@ async function runFullRefresh({ trigger }) {
       }
     }
 
+    // Pre-compute the duration analysis so the frontend can serve initial
+    // load from cache instead of iterating ~300 projects on every request.
+    try {
+      const analyzed = computeProjectDurations(allProjects, tasksByGid);
+      await fs.writeFile(ANALYZED_CACHE_FILE, JSON.stringify(analyzed, null, 2));
+      console.log(`[refresh] computed analyzed cache for ${analyzed.length} project(s)`);
+    } catch (err) {
+      console.warn('[refresh] analyzed-cache computation failed:', err.message);
+    }
+
     const finishedAt = Date.now();
     await saveCacheMetadata({
       projectsTimestamp: finishedAt,
-      analyzedTimestamp: 0,
+      analyzedTimestamp: finishedAt,
       lastRefresh: finishedAt,
       lastRefreshTrigger: trigger,
       lastRefreshDurationMs: finishedAt - startedAt,
@@ -350,7 +556,8 @@ app.get('/api/health', async (req, res) => {
       config: {
         hasAsanaToken: Boolean(ASANA_TOKEN),
         asanaApiBase: ASANA_API_BASE,
-        refreshIntervalDays: REFRESH_INTERVAL_DAYS,
+        refreshIntervalHours: REFRESH_INTERVAL_HOURS,
+        refreshIntervalDays: REFRESH_INTERVAL_HOURS / 24,
         refreshSecretRequired: Boolean(REFRESH_SECRET),
         enrichConcurrency: ENRICH_CONCURRENCY,
       },
@@ -440,10 +647,8 @@ app.get('/api/cache/projects', async (req, res) => {
 });
 
 app.get('/api/cache/analyzed', async (req, res) => {
-  // analyzed.json is no longer populated by the server (the frontend computes
-  // it cheaply from the projects + project_tasks caches). The endpoint stays
-  // for backwards compatibility but will normally return 404 so the client
-  // falls through to compute fresh.
+  // Pre-computed duration analysis - see computeProjectDurations() above.
+  // The client's fast-path reads this directly instead of recomputing.
   try {
     const metadata = await getCacheMetadata();
     if (!isCacheValid(metadata.analyzedTimestamp)) {
@@ -551,15 +756,38 @@ ensureCacheDir().catch((err) => console.error('[cache] init failed:', err));
     console.warn('[cron] ASANA_TOKEN not configured - cron will not be scheduled');
     return;
   }
-  // Run at 03:00 server time every N days (low-traffic window).
-  const expr = REFRESH_INTERVAL_DAYS === 1 ? '0 3 * * *' : `0 3 */${REFRESH_INTERVAL_DAYS} * *`;
+  // Build a cron expression from REFRESH_INTERVAL_HOURS.
+  // - Sub-day intervals that evenly divide 24 (2, 3, 4, 6, 8, 12) -> "0 */H * * *"
+  // - 24h exactly -> "0 3 * * *" (daily at 03:00, low-traffic)
+  // - Multi-day intervals -> "0 3 */D * *" where D = round(H/24)
+  // - Anything else that doesn't cleanly express in cron falls back to
+  //   the nearest sensible daily schedule.
+  let expr;
+  let humanLabel;
+  if (REFRESH_INTERVAL_HOURS < 24 && 24 % REFRESH_INTERVAL_HOURS === 0) {
+    expr = `0 */${REFRESH_INTERVAL_HOURS} * * *`;
+    humanLabel = `every ${REFRESH_INTERVAL_HOURS} hour(s)`;
+  } else if (REFRESH_INTERVAL_HOURS === 24) {
+    expr = '0 3 * * *';
+    humanLabel = 'daily at 03:00';
+  } else if (REFRESH_INTERVAL_HOURS % 24 === 0) {
+    const days = REFRESH_INTERVAL_HOURS / 24;
+    expr = `0 3 */${days} * *`;
+    humanLabel = `every ${days} day(s) at 03:00`;
+  } else {
+    // Odd sub-day interval that doesn't divide 24 cleanly; fall back to
+    // an approximate daily schedule.
+    const days = Math.max(1, Math.round(REFRESH_INTERVAL_HOURS / 24));
+    expr = days === 1 ? '0 3 * * *' : `0 3 */${days} * *`;
+    humanLabel = `every ${days} day(s) at 03:00 (approximated from ${REFRESH_INTERVAL_HOURS}h)`;
+  }
   cron.schedule(expr, () => {
     console.log('[cron] tick', new Date().toISOString());
     runFullRefresh({ trigger: 'cron' }).catch((err) =>
       console.error('[cron] refresh failed:', err)
     );
   });
-  console.log(`[cron] scheduled "${expr}" (every ${REFRESH_INTERVAL_DAYS} day(s) at 03:00)`);
+  console.log(`[cron] scheduled "${expr}" - ${humanLabel}`);
 })();
 
 // =================== server start with port fallback ===================
